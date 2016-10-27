@@ -1,6 +1,6 @@
 # ---- _0.1 ----
 load_sample_meta_data = function() {
-  meta = read.csv('../meta/Sample_Meta.csv', header=T, stringsAsFactors=FALSE)
+  meta = read.csv('../../input/meta/Sample_Meta.csv', header=T, stringsAsFactors=FALSE)
   meta %>% mutate(Strain = relevel(factor(Strain),'WT'),
                  Drug = relevel(factor(Drug),'None'),
                  Stress = relevel(factor(Stress),'None'),
@@ -12,14 +12,21 @@ load_sample_meta_data = function() {
 load_seq_meta_data = function() {
   # lane_annotation files look differnet, in terms of the number of feilds. this will take some thinking to figure out, need to for loop
   # over the annotation files, and pull in relivant fields, or maybe we just exclude previous data.
-  meta_files = list.files('../meta/all_seq_meta/',pattern = '*lane*')
+  meta_files = list.files('../../input/meta/all_seq_meta/',pattern = '*lane*')
   meta <- do.call("rbind",
                   lapply(meta_files,
-                         function(fn) data.frame(Filename=fn, read.table(file.path('../meta/all_seq_meta',fn), header=T, sep='\t', stringsAsFactors=FALSE))))
+                         function(fn) data.frame(Filename=fn, read.table(file.path('../../input/meta/all_seq_meta',fn), header=T, sep='\t', stringsAsFactors=FALSE))))
   meta = meta %>%
     mutate(tophat_path = file.path('../data/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
            star_path = file.path('../data/star', paste(SampleName, '_ReadsPerGene.out.tab',sep='')) ) %>%
     rename(sample = SampleName)
+    return(meta)
+}
+
+get_sample_meta = function() {
+    sample_meta = load_sample_meta_data()
+    seq_meta = load_seq_meta_data()
+    meta = right_join(sample_meta, seq_meta, by = c('Sample_Name' = 'sample'))
     return(meta)
 }
 
@@ -33,22 +40,6 @@ load_transcripts_to_genes = function() {
       ens_gene = ensembl_gene_id, ext_gene = external_gene_name)
     t2g <- t2g %>% dplyr::mutate(name=ifelse(ext_gene=='',ens_gene,ext_gene))
     return(t2g)
-}
-
-load_slueth_object = function(model, meta, t2g) {
-    so <- sleuth_prep(meta, model, target_mapping = t2g, aggregation_column = 'ens_gene')
-    so <- sleuth_fit(so)
-    return(so)
-}
-
-load_count_matrix = function(meta, type = 'tophat'){
-# The meta file must contain at least the seq meta data.
-paths = switch(type, tophat = meta$tophat_path, star = meta$star_path)
-count_matrix <- do.call("cbind",
-                lapply(paths,
-                       function(p) load_count_file(p, type)))
-colnames(count_matrix) = meta$Sample_Name
-return(count_matrix)
 }
 
 load_count_file = function(path, type = 'tophat') {
@@ -68,17 +59,24 @@ load_count_file = function(path, type = 'tophat') {
     return(counts_table)
 }
 
-load_deseq_object = function(model, meta, gene_count_matrix) {
-    dds<-  DESeqDataSetFromMatrix(countData= gene_count_matrix, colData= meta, model) #~ Strain + Drug + Condition)
-    dds <- DESeq(dds)
-    dds <- estimateSizeFactors(dds)
-    return(dds)
+load_count_matrix = function(meta, type = 'tophat'){
+    # The meta file must contain at least the seq meta data.
+    paths = switch(type, tophat = meta$tophat_path, star = meta$star_path)
+    count_matrix <- do.call("cbind",
+                    lapply(paths,
+                           function(p) load_count_file(p, type)))
+    colnames(count_matrix) = meta$Sample_Name
+    return(count_matrix)
 }
 
-load_regulation_matrix = function() {
-    reg = fread('../data/yeastract/RegulationTwoColumnTable_Documented_2013927.tsv',
-                            header=T,
-                            sep=';')
+load_gene_list_from_file = function(file) {
+    return(read.table(file, header=F, stringsAsFactors=F)[,1])
+}
+
+load_binary_yeastract_regulation_table = function(file = '../data/yeastract/RegulationTwoColumnTable_Documented_2013927.tsv', sep = ';') {
+    reg = fread(file,
+                header=T,
+                sep=sep)
     # regulation = fread('../data/yeastract/RegulationMatrix_Documented_2013927.csv',
     #                         row.names=1,
     #                         quote='',
@@ -88,17 +86,23 @@ load_regulation_matrix = function() {
     return (reg)
 }
 
-load_regulation_matrix_2 = function() {
-    regT = read.csv('~/Desktop/106_pvalbygene_ypd_v9.0.csv',header=T)
+load_pval_rickYong_regulation_table = function(file = '~/Desktop/Datasets/106_pvalbygene_ypd_v9.0.csv') {
+    regT = read.csv(file,header=T, stringsAsFactors=F)
     reg = gather(regT,TF,pval, -ens_name,-ext_name,-description) %>%
     rename(Target=ext_name)
+    reg$Target[reg$Target=="#REF!"] = reg$ens_name[reg$Target=="#REF!"]
     return(reg)
 }
 
-add_reg_metadata = function(reg, t2g, expression){
-    #t2g <- t2g %>% dplyr::mutate(name=ifelse(ext_gene=='',ens_gene,ext_gene))
-    reg$index = match(reg$Target,t2g$name)
-    reg$name = t2g$target_id[reg$index]
-    reg$expression_index = match(reg$name,rownames(expression))
-    return(reg)
+load_slueth_object = function(model, meta, t2g) {
+    so <- sleuth_prep(meta, model, target_mapping = t2g, aggregation_column = 'ens_gene')
+    so <- sleuth_fit(so)
+    return(so)
+}
+
+load_deseq_object = function(model, meta, gene_count_matrix) {
+    dds<-  DESeqDataSetFromMatrix(countData= gene_count_matrix, colData= meta, model) #~ Strain + Drug + Condition)
+    dds <- DESeq(dds)
+    dds <- estimateSizeFactors(dds)
+    return(dds)
 }
