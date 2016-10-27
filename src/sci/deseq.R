@@ -17,9 +17,7 @@ source('0.2-data_manipulation_functions.R')
 source('0.3-plotting_functions.R')
 
 t2g = load_transcripts_to_genes()
-sample_meta = load_sample_meta_data()
-seq_meta = load_seq_meta_data()
-meta = right_join(sample_meta, seq_meta, by = c('Sample_Name' = 'sample'))
+meta = get_sample_meta()
 raw_counts = load_count_matrix(meta,'tophat')
 
 dds_all = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~1)
