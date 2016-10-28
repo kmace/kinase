@@ -1,17 +1,3 @@
-library(DESeq2)
-library(dplyr)
-library(ggplot2)
-library(biomaRt)
-library(viridis)
-library(tidyr)
-library(genefilter)
-#library(ggrepel)
-#library(plotly)
-#library(Glimma)
-library(vsn)
-library(RColorBrewer)
-
-
 source('../utils/0.1-data_loading_functions.R')
 source('../utils/0.2-data_manipulation_functions.R')
 source('../utils/0.3-plotting_functions.R')

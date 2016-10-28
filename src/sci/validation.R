@@ -1,6 +1,4 @@
-library(dplyr)
-library(tidyr)
-select = dplyr::select
+
 meta = read.table('../meta/Pincus/hiseq_info.txt', header=T, stringsAsFactors=FALSE, sep = '\t')
 meta = meta %>%
     separate(Barcode,c('Tnum','bar'),sep='-') %>%
