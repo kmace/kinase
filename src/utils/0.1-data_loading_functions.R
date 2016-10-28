@@ -17,8 +17,8 @@ load_seq_meta_data = function() {
                   lapply(meta_files,
                          function(fn) data.frame(Filename=fn, read.table(file.path('../../input/meta/all_seq_meta',fn), header=T, sep='\t', stringsAsFactors=FALSE))))
   meta = meta %>%
-    mutate(tophat_path = file.path('../data/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
-           star_path = file.path('../data/star', paste(SampleName, '_ReadsPerGene.out.tab',sep='')) ) %>%
+    mutate(tophat_path = file.path('../../input/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
+           star_path = file.path('../../input/star', paste(SampleName, '_ReadsPerGene.out.tab',sep='')) ) %>%
     rename(sample = SampleName)
     return(meta)
 }
