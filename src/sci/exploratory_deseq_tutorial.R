@@ -50,9 +50,3 @@ mdsData <- data.frame(cmdscale(sampleDistMatrix))
 mds <- cbind(mdsData, as.data.frame(colData(rld)))
 ggplot(mds, aes(X1,X2,color=kinase_deactivated,shape=Condition)) + geom_point(size=3) +
 coord_fixed()
-
-
-dds <- DESeq(dds)
-res = results(dds)
-summary(res)
-table(res$padj < 0.1)
