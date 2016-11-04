@@ -1,18 +1,30 @@
-# ---- Setup ----
-
-# Master Script
+# Load library without messages
+message("\nLoading required R packages ....")
+#suppressMessages(library(DESeq2))
+library(biomaRt)
+library(DESeq2)
 library(dplyr)
-library(tidyr)
+library(genefilter)
+#library(ggbiplot)
+library(ggplot2)
+#library(ggrepel)
+library(ggrepel)
+#library(Glimma)
+library(gplots)
+library(lattice)
+library(mclust)
+library(pheatmap)
+#library(plotly)
+#Poisson Distance (Witten 2011), implemented in the PoiClaClu package. This measure of dissimilarity between counts also takes the inherent variance structure of counts into consideration when calculating the distances between samples
+library(PoiClaClu)
+library(RColorBrewer)
 library(reshape2)
 library(rhdf5)
 library(sleuth)
-library(biomaRt)
-library(DESeq2)
-library(ggplot2)
-library(ggbiplot)
-library(gplots)
+library(tidyr)
+library(UpSetR)
 library(viridis)
+library(vsn)
 
-
-select = dplyr::select
 rename = dplyr::rename
+select = dplyr::select

@@ -1,12 +1,3 @@
-library(DESeq2)
-library(dplyr)
-library(ggplot2)
-library(biomaRt)
-library(viridis)
-library(tidyr)
-library(genefilter)
-library(vsn)
-library(RColorBrewer)
 
 
 source('../utils/0.1-data_loading_functions.R')

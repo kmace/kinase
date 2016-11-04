@@ -1,6 +1,4 @@
-library(dplyr)
-library(tidyr)
-select = dplyr::select
+
 meta = read.table('../meta/Pincus/hiseq_info.txt', header=T, stringsAsFactors=FALSE, sep = '\t')
 meta = meta %>%
     separate(Barcode,c('Tnum','bar'),sep='-') %>%
@@ -14,9 +12,6 @@ meta = meta %>%
            Condition = relevel(factor(Condition),'NO')) #%>%
     #filter(Condition=='HS')
 
-library("rhdf5")
-library("sleuth")
-library("biomaRt")
 
 mart <- biomaRt::useMart(biomart = "ensembl", dataset = "scerevisiae_gene_ensembl")
 mart

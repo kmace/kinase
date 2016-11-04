@@ -1,6 +1,3 @@
-library(dplyr)
-library(RColorBrewer)
-
 meta = read.csv('../meta/384_Well_meta.csv',header=T)
 od = read.table('../data/kinase_as_growth.txt', header=T)
 od = od[,-c(1,2)]

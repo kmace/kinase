@@ -17,8 +17,7 @@ plot(assay(rld)[,1:2],
 
 sampleDists <- dist( t( assay(rld) ) )
 
-library("pheatmap")
-library("RColorBrewer")
+
 
 #Heatmap of sample-to-sample distances using the rlog-transformed values.
 sampleDistMatrix <- as.matrix( sampleDists )
@@ -31,9 +30,7 @@ pheatmap(sampleDistMatrix,
          col=colors)
 
 #Poisson Distance (Witten 2011), implemented in the PoiClaClu package. This measure of dissimilarity between counts also takes the inherent variance structure of counts into consideration when calculating the distances between samples
-
- library("PoiClaClu")
- poisd <- PoissonDistance(t(counts(dds)))
+poisd <- PoissonDistance(t(counts(dds)))
 
  samplePoisDistMatrix <- as.matrix( poisd$dd )
 rownames(samplePoisDistMatrix) <- rld$sample
@@ -53,9 +50,3 @@ mdsData <- data.frame(cmdscale(sampleDistMatrix))
 mds <- cbind(mdsData, as.data.frame(colData(rld)))
 ggplot(mds, aes(X1,X2,color=kinase_deactivated,shape=Condition)) + geom_point(size=3) +
 coord_fixed()
-
-
-dds <- DESeq(dds)
-res = results(dds)
-summary(res)
-table(res$padj < 0.1)

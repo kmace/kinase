@@ -86,6 +86,23 @@ load_binary_yeastract_regulation_table = function(file = '../data/yeastract/Regu
     return (reg)
 }
 
+load_probBinding_yetfasco_regulation_table = function(file = '../../input/reference/yetfasco/20120129_allMotifData1.02.rdat', use_expert=TURE) {
+    load(file)
+    library(rvest)
+    library(stringr)
+    library(tidyr)
+    txt = paste('<table>', str_c(datasetNames, collapse=' '), '</table>')
+    html = read_html(txt)
+    exp_table = html_table(html)[[1]]
+    regT = data.frame(t(dataMat))
+    regT[,'expert'] = FALSE
+    regT[expert,'expert'] = TRUE
+    regT[,'TF'] = exp_table[,2]
+    regT[,'exp_name'] = exp_table[,1]
+    reg = gather(regT, Target, log_prob_bind, -expert, -TF, -exp_name)
+    return(reg)
+}
+
 load_pval_rickYong_regulation_table = function(file = '~/Desktop/Datasets/106_pvalbygene_ypd_v9.0.csv') {
     regT = read.csv(file,header=T, stringsAsFactors=F)
     reg = gather(regT,TF,pval, -ens_name,-ext_name,-description) %>%

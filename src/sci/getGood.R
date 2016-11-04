@@ -1,13 +1,3 @@
-library(sleuth)
-library(dplyr)
-library(gplots)
-library(viridis)
-library(ggplot2)
-library(ggrepel)
-library(UpSetR)
-
-library("biomaRt")
-
 mart <- biomaRt::useMart(biomart = "ensembl", dataset = "scerevisiae_gene_ensembl")
 mart
 t2g <- biomaRt::getBM(attributes = c("ensembl_transcript_id", "ensembl_gene_id",
