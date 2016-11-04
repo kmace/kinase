@@ -17,13 +17,50 @@ load('../../input/images/normalized_data.RData')
 #HS_genes = read.table('../../input/reference/HSF1_targets.txt', header=F, stringsAsFactors=F)[,1]
 HS_genes = read.table('../../input/reference/Heatshock_Interest_targets.txt', header=F, stringsAsFactors=F)[,1]
 # Normalize
-control_drug = which(
+control = which(
+    colData(rld_all)$Stress == 'None' &
+    colData(rld_all)$Drug == 'None' &
+    colData(rld_all)$Media == 'YPD' &
+    colData(rld_all)$Strain == 'WT')
+
+hs = which(
+    colData(rld_all)$Stress == 'Heatshock' &
+    colData(rld_all)$Drug == 'None' &
+    colData(rld_all)$Media == 'YPD' &
+    colData(rld_all)$Strain == 'WT')
+
+control = assay(rld_all[HS_target_id,control])
+hs = assay(rld_all[HS_target_id,hs])
+
+t = cbind(control, hs)
+colnames(t) = c('c','c','c','c','hs','hs','hs','hs')
+tt = t(apply(t,1,function(x) x - mean(x)))
+pheatmap(tt, main='None')
+
+dev.new()
+control = which(
+    colData(rld_all)$Stress == 'None' &
+    colData(rld_all)$Drug == 'Cocktail' &
+    colData(rld_all)$Media == 'YPD' &
+    colData(rld_all)$Strain == 'WT')
+
+hs = which(
     colData(rld_all)$Stress == 'Heatshock' &
     colData(rld_all)$Drug == 'Cocktail' &
     colData(rld_all)$Media == 'YPD' &
     colData(rld_all)$Strain == 'WT')
 
+control = assay(rld_all[HS_target_id,control])
+hs = assay(rld_all[HS_target_id,hs])
+
+t = cbind(control, hs)
+colnames(t) = c('c','c','c','c','hs','hs','hs','hs')
+tt = t(apply(t,1,function(x) x - mean(x)))
+pheatmap(tt, main='Cocktail')
+
 control_mean = apply((assay(rld_all[,control_drug])),1,mean)
+hs_mean = apply((assay(rld_all[,control_drug])),1,mean)
+
 norm = apply(assay(rld_all),2, function(x) x - control_mean)
 
 # Get Genes
