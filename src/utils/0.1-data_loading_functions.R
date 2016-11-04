@@ -17,8 +17,8 @@ load_seq_meta_data = function() {
                   lapply(meta_files,
                          function(fn) data.frame(Filename=fn, read.table(file.path('../../input/meta/all_seq_meta',fn), header=T, sep='\t', stringsAsFactors=FALSE))))
   meta = meta %>%
-    mutate(tophat_path = file.path('../../input/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
-           star_path = file.path('../../input/star', paste(SampleName, '_ReadsPerGene.out.tab',sep='')) ) %>%
+    mutate(tophat_path = file.path('../../input/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
+           star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')) ) %>%
     rename(sample = SampleName)
     return(meta)
 }
@@ -47,7 +47,7 @@ load_count_file = function(path, type = 'tophat') {
     d = dim(counts_table)
     if(type == 'star') {
         num_non_genes = 4
-        counts_table = counts_table[-c(1:num_non_genes), ,drop=F]
+        counts_table = counts_table[-c(1:num_non_genes), 1,drop=F]
         # non_gene_location = 'begining'
     } else if(type == 'tophat') {
         num_non_genes = 5
