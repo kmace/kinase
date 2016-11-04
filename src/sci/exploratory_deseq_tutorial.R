@@ -49,4 +49,4 @@ plotPCA(rld, intgroup = c("Condition"))
 mdsData <- data.frame(cmdscale(sampleDistMatrix))
 mds <- cbind(mdsData, as.data.frame(colData(rld)))
 ggplot(mds, aes(X1,X2,color=kinase_deactivated,shape=Condition)) + geom_point(size=3) +
-coord_fixed()q
+coord_fixed()

@@ -14,6 +14,8 @@ colData(dds_all)$Drug = relevel(factor(colData(dds_all)$Drug), 'None')
 colData(dds_all)$Stress = relevel(factor(colData(dds_all)$Stress), 'None')
 colData(dds_all)$Media = relevel(factor(colData(dds_all)$Media), 'YPD')
 
+dds = dds_all[,colData(dds_all)$Prep.QC == "PASSED" & colData(dds_all)$QC == "PASSED"]
+
 rld_all <- rlogTransformation(dds_all)
 
 rld_all_filtered = rld_all[,colData(rld_all)$Prep.QC == "PASSED"]
