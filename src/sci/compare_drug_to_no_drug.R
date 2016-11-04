@@ -1,3 +1,7 @@
+source('../utils/load_libraries.R')
+source('../utils/load_functions.R')
+source('../utils/load_data.R')
+
 control_noDrug = which(
     colData(rld_all)$Stress == 'None' &
     colData(rld_all)$Drug == 'None' &
