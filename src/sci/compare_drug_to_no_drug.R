@@ -3,41 +3,43 @@ source('../utils/load_functions.R')
 source('../utils/load_data.R')
 
 control_noDrug = which(
-    colData(rld_all)$Stress == 'None' &
-    colData(rld_all)$Drug == 'None' &
-    colData(rld_all)$Media == 'YPD' &
-    colData(rld_all)$Strain == 'WT')
+    rlog_meta$Stress == 'None' &
+    rlog_meta$Drug == 'None' &
+    rlog_meta$Media == 'YPD' &
+    rlog_meta$Strain == 'WT')
 
 condition_noDrug = which(
-    colData(rld_all)$Stress == 'Heatshock' &
-    colData(rld_all)$Drug == 'None' &
-    colData(rld_all)$Media == 'YPD' &
-    colData(rld_all)$Strain == 'WT')
+    rlog_meta$Stress == 'Heatshock' &
+    rlog_meta$Drug == 'None' &
+    rlog_meta$Media == 'YPD' &
+    rlog_meta$Strain == 'WT')
 
 control_Drug = which(
-    colData(rld_all)$Stress == 'None' &
-    colData(rld_all)$Drug == 'Cocktail' &
-    colData(rld_all)$Media == 'YPD' &
-    colData(rld_all)$Strain == 'WT')
+    rlog_meta$Stress == 'None' &
+    rlog_meta$Drug == 'Cocktail' &
+    rlog_meta$Media == 'YPD' &
+    rlog_meta$Strain == 'WT')
 
 condition_Drug = which(
-    colData(rld_all)$Stress == 'Heatshock' &
-    colData(rld_all)$Drug == 'Cocktail' &
-    colData(rld_all)$Media == 'YPD' &
-    colData(rld_all)$Strain == 'WT')
+    rlog_meta$Stress == 'Heatshock' &
+    rlog_meta$Drug == 'Cocktail' &
+    rlog_meta$Media == 'YPD' &
+    rlog_meta$Strain == 'WT')
 
 get_sample_mean = function(x) apply(x,1,mean)
 
-control_noDrug = get_sample_mean(assay(rld_all[,control_noDrug]))
-condition_noDrug = get_sample_mean(assay(rld_all[,condition_noDrug]))
-control_Drug = get_sample_mean(assay(rld_all[,control_Drug]))
-condition_Drug = get_sample_mean(assay(rld_all[,condition_Drug]))
+control_noDrug = get_sample_mean(rlog[,control_noDrug])
+condition_noDrug = get_sample_mean(rlog[,condition_noDrug])
+control_Drug = get_sample_mean(rlog[,control_Drug])
+condition_Drug = get_sample_mean(rlog[,condition_Drug])
+
+c = cor(condition_Drug   - control_Drug,
+        condition_noDrug - control_noDrug)
 
 plot(condition_Drug   - control_Drug,
      condition_noDrug - control_noDrug)
 
-cor(condition_Drug   - control_Drug,
-     condition_noDrug - control_noDrug)
+
 
 
 hs = apply(assay(rld_all[HS_target_id,hs]),1,mean)
