@@ -55,7 +55,8 @@ plot_comp = function(condition = 'Heatshock') {
     abline(0,1)
 }
 
-pdf('drug_normalization.pdf')
+dir.create('../../output/compare_drug_to_no_drug.R')
+pdf('../../output/compare_drug_to_no_drug.R/drug_normalization.pdf')
 lapply(conditions, plot_comp)
 dev.off()
 
