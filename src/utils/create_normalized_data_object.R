@@ -14,7 +14,7 @@ colData(dds)$Stress = relevel(factor(colData(dds)$Stress), 'None')
 colData(dds)$Media = relevel(factor(colData(dds)$Media), 'YPD')
 
 rld_all <- rlogTransformation(dds, blind=TRUE)
-rlog = assays(rld_all)
+rlog = assay(rld_all)
 rlog_meta = colData(rld_all)
 
-save.image('../../input/normalized_data.RData')
+save.image('../../input/images/normalized_data.RData')
