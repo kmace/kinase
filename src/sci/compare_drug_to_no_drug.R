@@ -29,6 +29,12 @@ plot_drug_comp = function(condition = 'Heatshock') {
          main = paste('The FC between ', condition, ' and YPD.\n Comparing with and without Drug.\ncor = ', c)
          )
     abline(0,1)
+    abline(v=0,lty=3)
+    abline(h=0,lty=3)
+    d = drug[t2g$target_id[t2g$name %in% hs]]
+    nd = noDrug[t2g$target_id[t2g$name %in% hs]]
+    points(nd,d, col='red', pch=16)
+
 }
 
 plot_cond_comp = function(condition = 'Heatshock') {
