@@ -16,8 +16,15 @@ load_seq_meta_data = function() {
 	# over the annotation files, and pull in relivant fields, or maybe we just exclude previous data.
 	meta_files = list.files('../../input/meta/all_seq_meta/',pattern = '*lane*')
 	meta <- do.call("rbind",
-									lapply(meta_files,
-												 function(fn) data.frame(Filename=fn, read.table(file.path('../../input/meta/all_seq_meta',fn), header=T, sep='\t', stringsAsFactors=FALSE))))
+					lapply(meta_files,
+						   function(fn) data.frame(Filename=fn,
+							   					   read.table(file.path('../../input/meta/all_seq_meta',fn),
+												   header=T,
+												   sep='\t',
+												   stringsAsFactors=FALSE)
+						   			   			   )
+						  )
+					)
 	meta = meta %>%
 		mutate(tophat_path = file.path('../../input/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
 					 star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')) ) %>%
