@@ -20,13 +20,16 @@ plot_drug_comp = function(condition = 'Heatshock') {
     drug = condition_Drug - control_Drug
     noDrug = condition_noDrug - control_noDrug
 
-    c = cor(drug, noDrug)
-
+    corr = cor(drug, noDrug)
+    #covv = cov(drug, noDrug)
     plot(noDrug, # X
          drug, # Y
          xlab='FC without Drug',
          ylab='FC with Drug',
-         main = paste('The FC between ', condition, ' and YPD.\n Comparing with and without Drug.\ncor = ', c)
+         main = paste('The FC between ', condition,
+                      ' and YPD.\n Comparing with and without Drug.\n',
+                      'cor = ', round(corr,2))#,
+                      #'\ncov = ', round(covv,3))
          )
     abline(0,1)
     abline(v=0,lty=3)
@@ -52,13 +55,16 @@ plot_cond_comp = function(condition = 'Heatshock') {
     condition_val = condition_Drug - condition_noDrug
     control_val =  control_Drug - control_noDrug
 
-    c = cor(condition_val, control_val)
-
+    corr = cor(condition_val, control_val)
+    covv = cov(condition_val, control_val)
     plot(control_val, # X
          condition_val, # Y
          xlab='Drug FC in YPD',
          ylab=paste('Drug FC in ', condition),
-         main = paste('The FC between Drug and no Drug.\n Comparing: with and without ', condition, '.\ncor = ', c)
+         main = paste('The FC between Drug and no Drug.\n',
+                      'Comparing: with and without ', condition, '.\n',
+                      'cor = ', round(corr,2))#,
+                      #'cov = ', round(covv,3))
          )
     abline(0,1)
 }
@@ -89,6 +95,8 @@ control_Drug = get_sample_mean(rlog[,control_Drug])
 availability_table = data.frame(rlog_meta) %>% dplyr::select(Stress, Drug) %>% table
 have_data = apply(availability_table,1,min) != 0
 conditions = rownames(availability_table)[have_data]
+
+hs = load_gene_list_from_file('../../input/reference/HSF1_targets_in_HS_yestract.txt')
 
 dir.create('../../output/compare_drug_to_no_drug.R')
 pdf('../../output/compare_drug_to_no_drug.R/drug_vs_noDurg.pdf')
