@@ -7,7 +7,8 @@ load_sample_meta_data = function() {
 								 Stress = relevel(factor(Stress),'None'),
 								 Media = relevel(factor(Media),'YPD'),
 								 Experimenter = relevel(factor(Experimenter),'Kieran')) %>%
-					unite(Condition, c(Stress, Media, Drug), remove = FALSE)
+					unite(Condition, c(Stress, Media, Drug), remove = FALSE) %>%
+					mutate(Condition = relevel(factor(Condition), 'None_YPD_None'))
 		return(meta)
 }
 
@@ -27,7 +28,8 @@ load_seq_meta_data = function() {
 					)
 	meta = meta %>%
 		mutate(tophat_path = file.path('../../input/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
-					 star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')) ) %>%
+					 star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')),
+					 kallisto_path = file.path('../../input/kallisto/kallisto_output/', paste(Sample_Name,'_sequence.txt.gz',sep='')) ) %>%
 		rename(sample = SampleName)
 		return(meta)
 }
