@@ -15,7 +15,7 @@ while read STR; do
     sample=$(echo $STR | cut -f1 -d,)
     file=$(echo $STR | cut -f2 -d,)
     echo sending $file for processing
-    bsub -J "${project_name}_lib${jobnum}" "../run_one_library.sh $source_location $file $sample"
+    bsub -J "${project_name}_lib${jobnum}" "../scripts/run_one_library.sh $source_location $file $sample"
     jobnum=$((jobnum + 1))
 done <meta/meta.tsv
 

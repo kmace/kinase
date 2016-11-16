@@ -21,6 +21,6 @@ nf=`cat geneExpression_all.xls | awk '{print NF}' | sort -nu | tail -n 1`
 cat geneExpression_all.xls | cut -f 1,$(( $nf - $(( $(( $nf - 1 )) / 2 )) + 1 ))-$nf > geneExpression_normalized.xls
 rm temp_sample
 
-Rscript ../../annotate_yeast.R
+Rscript ../../scripts/annotate_yeast.R
 
 cd ..
