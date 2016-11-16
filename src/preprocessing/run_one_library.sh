@@ -9,6 +9,7 @@ cd fastq
 tar -xf ${source_location}/QualityScore/${source_filename} # should go to local -C . fastq/${sample_name}_sequence.txt.tar.gz
 mv ./lab/solexa_public/Pincus/*/QualityScore/${untarred_filename} ${sample_name}_sequence.txt
 gzip ${sample_name}_sequence.txt
+rm -rf ./lab
 cd ..
 tophat --solexa1.3-quals -p 4 --segment-length 20 -I 2500 -G /nfs/genomes/sgd_2010/gtf/Saccharomyces_cerevisiae.R64-1-1.80_chr.gtf -o tophat_output/${sample_name} /nfs/genomes/sgd_2010/bowtie/sacCer3 fastq/${sample_name}_sequence.txt.tar.gz
 mv tophat_output/${sample_name}/accepted_hits.bam bam/${sample_name}.bam

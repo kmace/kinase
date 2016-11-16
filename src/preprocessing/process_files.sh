@@ -1,4 +1,4 @@
-#!/bin/bash                                                                                                                                         # Get the location of the files and desired project name 
+#!/bin/bash                                                                                                                                         # Get the location of the files and desired project name
 source_location=${1%/}
 project_name=${2%/}
 mkdir $project_name
@@ -7,7 +7,7 @@ cd $project_name
 mkdir fastq tophat_output bam counts meta
 # Copy metadata across
 cp ${source_location}/*laneannotation.xls meta/
-Rscript ../parseMeta.R meta/*laneannotation.xls
+Rscript ../scripts/parseMeta.R meta/*laneannotation.xls
 
 # Loop through meta data
 jobnum=0
@@ -20,8 +20,5 @@ while read STR; do
 done <meta/meta.tsv
 
 
-bsub -J "merge_libs" -w "done(${project_name}_lib*)" "../merge_and_normalize_counts.sh"
+bsub -J "merge_libs" -w "done(${project_name}_lib*)" "../scripts/merge_and_normalize_counts.sh"
 cd ..
-
-
-
