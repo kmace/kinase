@@ -1,3 +1,6 @@
+library(dplyr)
+library(parallel)
+
 read_pcl = function(file) {
     raw = read.table(file,
          sep='\t',
@@ -17,21 +20,29 @@ read_pcl = function(file) {
     return(gene_average)
     }
 
-library(parallel)
+get_pc = function(pcl, num=3) {
+    if(dim(pcl)[2]<4){
+        return(NULL)
+    }
+    return(prcomp(t(pcl))$rotation[,1:num])
+}
 
 files = list.files('../../input/reference/spell', recursive=T, pattern='pcl',full.names =T)
 
 # Calculate the number of cores
 no_cores <- detectCores() - 1
 cl <- makeCluster(no_cores)
-clusterExport(cl,list("read_pcl"))
+clusterExport(cl,list("read_pcl", "get_pc"))
 junk <- clusterEvalQ(cl, library(dplyr))
 
-dims = parLapply(cl, files,
+# dims = parLapply(cl, files,
+#           function(x){
+#             dim(read_pcl(x))
+#             })
+pcs = parLapply(cl, files,
           function(x){
-            dim(read_pcl(x))
+            get_pc(read_pcl(x))
             })
-
 
 
 dat = do.call(rbind, dims)
