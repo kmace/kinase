@@ -6,6 +6,7 @@ read_pcl = function(file) {
          sep='\t',
          comment.char='',
          quote="",
+         na.strings = c("NA", "null"),
          fill=T,
          header=T)[-1,-c(2,3)]
     colnames(raw)[1] = 'YORF'
@@ -18,13 +19,22 @@ read_pcl = function(file) {
     rownames(gene_average) = gene_average$YORF
     gene_average = gene_average[,-1, drop=F]
     return(gene_average)
-    }
+}
 
 get_pc = function(pcl, num=3) {
-    if(dim(pcl)[2]<4){
+    if(dim(pcl)[2]<num+1){
         return(NULL)
     }
     return(prcomp(t(pcl))$rotation[,1:num])
+}
+
+get_stats = function(pcl){
+  min = apply(pcl,2,function(x) min(x, na.rm=T))
+  mean = apply(pcl,2,function(x) mean(x, na.rm=T))
+  med = apply(pcl,2,function(x) median(x, na.rm=T))
+  max = apply(pcl,2,function(x) max(x, na.rm=T))
+  sd = apply(pcl,2,function(x) sd(x, na.rm=T))
+  return(cbind(min,mean,med,max,sd))
 }
 
 files = list.files('../../input/reference/spell', recursive=T, pattern='pcl',full.names =T)
@@ -32,17 +42,15 @@ files = list.files('../../input/reference/spell', recursive=T, pattern='pcl',ful
 # Calculate the number of cores
 no_cores <- detectCores() - 1
 cl <- makeCluster(no_cores)
-clusterExport(cl,list("read_pcl", "get_pc"))
+clusterExport(cl,list("read_pcl", "get_pc", "get_stats"))
 junk <- clusterEvalQ(cl, library(dplyr))
 
-# dims = parLapply(cl, files,
-#           function(x){
-#             dim(read_pcl(x))
-#             })
-pcs = parLapply(cl, files,
-          function(x){
-            get_pc(read_pcl(x))
-            })
+pcls  = parLapply(cl, files, read_pcl)
+dims  = parLapply(cl, pcls, dim)
+stats = parLapply(cl, pcls, get_stats)
+
+
+pcs   = parLapply(cl, pcls, get_pc)
 
 
 dat = do.call(rbind, dims)
