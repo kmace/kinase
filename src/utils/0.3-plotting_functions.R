@@ -100,20 +100,20 @@ pca_plot = function(data, data_point_labels, label_vectors=FALSE) {
         theme(legend.direction = 'horizontal', legend.position = 'top')
 }
 
-plot_tf_expressions = function(expression, reg, file_name = 'Experssion_by_TF.pdf'){
+plot_tf_expressions = function(expression, reg, file_name = 'Expression_by_TF.pdf'){
     tfs = unique(reg$TF)
     pdf(file_name);
     for (i in 1:length(tfs)) {
-        dat = na.omit(expression[reg[reg$TF == tfs[i],]$expression_index,]);
+        dat = na.omit(expression[rownames(expression) %in% reg$Target[reg$TF == tfs[i]],])
         if(length(dim(dat))>1 && dim(dat)[1]>1){
             dat[dat > 2] = 2
             dat[dat < -2] = -2
             heatmap.2(dat,
-                      Colv=F,
+                      #Colv=F,
                       main=paste(tfs[i],': (',dim(dat)[1],' genes)',sep=''),
                       col=viridis(20),
-                      cexCol=.5,
-                      cexRow=0.01,
+                      cexCol= 1/log10(dim(dat)[2]) - 0.05,
+                      cexRow= 1/log10(dim(dat)[1]) - 0.05,
                       trace='none')
         }
     }
