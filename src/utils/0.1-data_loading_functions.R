@@ -18,18 +18,21 @@ load_seq_meta_data = function() {
 	meta_files = list.files('../../input/meta/all_seq_meta/',pattern = '*lane*')
 	meta <- do.call("rbind",
 					lapply(meta_files,
-						   function(fn) data.frame(Filename=fn,
-							   					   read.table(file.path('../../input/meta/all_seq_meta',fn),
-												   header=T,
-												   sep='\t',
-												   stringsAsFactors=FALSE)
-						   			   			   )
+						   function(fn) {
+								 t = data.frame(Filename=fn,
+							   					   		read.table(file.path('../../input/meta/all_seq_meta',fn),
+												   			header=T,
+												   			sep='\t',
+												   			stringsAsFactors=FALSE))
+								t = t[,-which(colnames(t) %in% c("NumberOfPeaks","X.RiP","Strain", "Drug","Condition"))]
+						   	return(t)
+							}
 						  )
 					)
 	meta = meta %>%
 		mutate(tophat_path = file.path('../../input/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
 					 star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')),
-					 kallisto_path = file.path('../../input/kallisto/kallisto_output/', paste(SampleName,'_sequence.txt.gz',sep='')) ) %>%
+					 kallisto_path = file.path('../../input/kallisto/kallisto_output', paste(SampleName,'_sequence.txt.gz',sep='')) ) %>%
 		rename(sample = SampleName)
 		return(meta)
 }
