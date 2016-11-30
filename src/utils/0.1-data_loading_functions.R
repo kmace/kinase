@@ -16,7 +16,7 @@ load_seq_meta_data = function() {
 	# lane_annotation files look differnet, in terms of the number of feilds. this will take some thinking to figure out, need to for loop
 	# over the annotation files, and pull in relivant fields, or maybe we just exclude previous data.
 	meta_files = list.files('../../input/meta/all_seq_meta/',pattern = '*lane*')
-	meta <- do.call("rbind",
+	meta <- do.call("rbind.fill",
 					lapply(meta_files,
 						   function(fn) {
 								 t = data.frame(Filename=fn,
@@ -24,7 +24,7 @@ load_seq_meta_data = function() {
 												   			header=T,
 												   			sep='\t',
 												   			stringsAsFactors=FALSE))
-								t = t[,-which(colnames(t) %in% c("NumberOfPeaks","X.RiP","Strain", "Drug","Condition"))]
+								#t = t[,-which(colnames(t) %in% c("NumberOfPeaks","X.RiP","Strain", "Drug","Condition","concbyQubit.nM..DF."))]
 						   	return(t)
 							}
 						  )

@@ -32,7 +32,8 @@ hc = hclust(dst)
 
 
 
-plot(as.phylo(hc_subset),
+#plot(as.phylo(hc_subset),
+plot(as.phylo(hc),
 		 type = "fan",
 		 tip.color = hsv(as.numeric(col_lab)/max(as.numeric(col_lab))),
 		 label.offset=10,

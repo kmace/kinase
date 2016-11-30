@@ -13,8 +13,17 @@ colData(dds)$Drug = relevel(factor(colData(dds)$Drug), 'None')
 colData(dds)$Stress = relevel(factor(colData(dds)$Stress), 'None')
 colData(dds)$Media = relevel(factor(colData(dds)$Media), 'YPD')
 
-rld_all <- rlogTransformation(dds, blind=TRUE)
-rlog = assay(rld_all)
-rlog_meta = colData(rld_all)
+#rld_all <- rlogTransformation(dds, blind=TRUE)
+#rlog = assay(rld_all)
+#rlog_meta = colData(rld_all)
+
+dds <- estimateSizeFactors(dds)
+baseMean <- rowMeans(counts(dds, normalized=TRUE))
+sum(baseMean > 1)
+idx <- sample(which(baseMean > 5), 1000)
+dds.sub <- dds[idx, ]
+dds.sub <- estimateDispersions(dds.sub)
+dispersionFunction(dds) <- dispersionFunction(dds.sub)
+vsd <- varianceStabilizingTransformation(dds, blind=FALSE)
 
 save.image('../../input/images/normalized_data.RData')
