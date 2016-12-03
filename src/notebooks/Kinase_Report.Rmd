@@ -1,0 +1,134 @@
+---
+title: "RNA Global Description"
+output:
+  html_document:
+    toc: true
+    fig_caption: true
+---
+RNA-seq Analysis
+========================================================
+
+**Sections:**
+1. Loading data, computing fold change, filtering etc.
+2. Global/Exploratory analysis of experiments
+3. Global/Exploratory analysis of Gene genes
+4. Significantly Differnetially expressed genes in heatshock conditions
+
+First we load packages and data:
+```{r Setup, message=FALSE, warning=FALSE, results=FALSE, cache=TRUE}
+
+source('../utils/load_libraries.R')
+source('../utils/load_functions.R')
+source('../utils/load_data.R')
+
+t2g = load_transcripts_to_genes()
+
+meta =  get_sample_meta()
+```
+We have gene expression counts using 3 methods:
+1. Kallisto, very fast, new technology. estimates gene counts
+2. STAR, very fast aligner, outputs reads that are unambiguously aligned to each transcript
+3. DESeq2 normalized STAR results. DESeq2 has methods for normalizing expression levels across different libraries.
+
+For this analysis I will focus on the DESeq2 normalized transcript counts. I have noticed that all 3 gene expression methods yield similar results.
+
+Now that the data is loaded, I will filter out genes that are lowly expressed.
+I defined "lowly expressed" genes as genes that have at 0 reads in at least one experiment
+
+I then normilize expression levels by computing the log2 fold change between experiments.
+as a reference experiment for the fold change calculation, I could do one of two things, I could pick an individual experiment to serve as a reference, or I can take the average of all the experiments.
+
+Personally I prefer taking the average for the following reasons:
+1. A single library may be subject to large fluctuations that will affect all experiments downstream (and we do not have repeats)
+2. We do not have a true control. the closest I can say we have is a WT strain, with NMPP1, and no heatshock.
+
+```{r fc}
+dds = DESeq(dds)
+fold_change = filter_and_foldchange(counts(dds,normalize=T))
+```
+
+Now lets take a look at the experiments and see how they cluster.
+I compute the pearson correlation between the fold changes and plot them below, clustering using single linkage method:
+
+```{r Plot Correlations,fig.width=11, fig.height=11}
+correlation_plot(fold_change)
+```
+
+As we can see, all the Heatshock experiments cluster together quite nicely. when viewed through log2 foldchange from the mean, they are negativly corrolated with the rest of the experiments.
+
+can we then expect these experiments to seperate when looking at the variation? probably but lets check:
+
+
+
+I think one thing that we need to try do is simplify the design. In essence there are two things, not 3. the two are HS/None and InactivationOfGeneX/None who cares about the no nmpp1 cases for the mutents? 
+
+```{r Show meta}
+meta
+#meta %>% select(Strain, Drug, Condition, kinase_deactivated)
+```
+
+DESeq Exploration:
+
+``` {r Deseq}
+dds = deseq_object
+nrow(dds)
+dds <- dds[ rowSums(counts(dds)) > 1, ]
+nrow(dds)
+rld <- rlog(dds, blind=FALSE)
+
+#Scatterplot of transformed counts from two samples. Shown are scatterplots using the log2 transform of normalized counts (left side) and using the rlog (right side).
+
+par( mfrow = c( 1, 2 ) )
+dds <- estimateSizeFactors(dds)
+plot(log2(counts(dds, normalized=TRUE)[,1:2] + 1),
+     pch=16, cex=0.3)
+plot(assay(rld)[,1:2],
+     pch=16, cex=0.3)
+
+
+
+sampleDists <- dist( t( assay(rld) ) )
+
+library("pheatmap")
+library("RColorBrewer")
+
+#Heatmap of sample-to-sample distances using the rlog-transformed values.
+sampleDistMatrix <- as.matrix( sampleDists )
+rownames(sampleDistMatrix) <- rld$sample
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+
+#Poisson Distance (Witten 2011), implemented in the PoiClaClu package. This measure of dissimilarity between counts also takes the inherent variance structure of counts into consideration when calculating the distances between samples
+
+ library("PoiClaClu")
+ poisd <- PoissonDistance(t(counts(dds)))
+
+ samplePoisDistMatrix <- as.matrix( poisd$dd )
+rownames(samplePoisDistMatrix) <- rld$sample
+colnames(samplePoisDistMatrix) <- NULL
+pheatmap(samplePoisDistMatrix,
+         clustering_distance_rows=poisd$dd,
+         clustering_distance_cols=poisd$dd,
+         col=colors)
+
+
+plotPCA(rld, intgroup = c("Condition", "kinase_deactivated"))
+plotPCA(rld, intgroup = c("Condition", "Strain","Drug"))
+plotPCA(rld, intgroup = c("Condition"))
+
+
+mdsData <- data.frame(cmdscale(sampleDistMatrix))
+mds <- cbind(mdsData, as.data.frame(colData(rld)))
+ggplot(mds, aes(X1,X2,color=kinase_deactivated,shape=Condition)) + geom_point(size=3) +
+coord_fixed()
+
+
+dds <- DESeq(dds)
+res = results(dds)
+summary(res)
+table(res$padj < 0.1)
+```
