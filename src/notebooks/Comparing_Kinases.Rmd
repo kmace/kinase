@@ -6,19 +6,86 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, fig.width=11, fig.height=11, message = FALSE)
+source('../utils/load_libraries.R')
+source('../utils/load_functions.R')
+library(d3heatmap)
+library(IDPmisc)
+
+t2g = load_transcripts_to_genes()
+
+master_meta = get_sample_meta()
+#raw_counts = load_count_matrix(master_meta,'star')
+
+# lib_size = apply(raw_counts,2,sum)
+# p = t(apply(raw_counts,1,function(x) x/lib_size))
+# p = rename_gene_names(p, t2g)
+
 ```
 
-## R Markdown
+## Extracting difference in Kinase within the Same Stress
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The primary goal of this project is to find kinases that, when inhibited, change some aspect of gene expression.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+These effects may be classified into two groups. those that happen independant of the type of stress, and those that only happen within a given stress.
 
-```{r cars}
-summary(cars)
+But before we attempt to disect these differences, we must first attempt to disect differneces in general. 
+
+I will therefore attempt to analyze a few stresses, starting with heatshock, to identify potential kinases that affect gene expression under this stress.
+
+### Heatshock
+
+We will first extract out all the data that is under heatshock, with the Cocktail. We can either:
+1. look at this data raw, 
+2. normalize by the WT strain, 
+3. or normalize by each strain with just drug. 
+
+lets start with Raw:
+
+But lets only look at the genes with the highest CV^2^
+
+```{r heatshock_raw, cache=TRUE}
+
+interactive_heatmap = function(plate_code){
+meta = master_meta %>% filter(Plate_Code==plate_code)
+raw_counts = load_count_matrix(meta,'star')
+dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~Strain)
+dds = DESeq(dds)
+rld = rlog(dds, blind=FALSE)
+library(genefilter)
+topVarGenes <- head(order(rowVars(assay(rld)),decreasing=TRUE),200)
+mat <- assay(rld)[ topVarGenes, ]
+mat <- mat - rowMeans(mat)
+mat = rename_gene_names(mat,t2g)
+colnames(mat) = meta$Strain_Code
+#df <- as.data.frame(colData(rld)[,c("Strain")])
+#pheatmap(mat, annotation_col=df)
+mat[mat > 2] = 2
+mat[mat < -2] = -2
+d3heatmap(mat, colors = "RdBu")
+}
+
+# Drug SDC
+interactive_heatmap("d")
+# Drug YPD
+interactive_heatmap("yd")
+# Drug Heatshock
+interactive_heatmap("h")
+# Drug Glucose Dropout
+interactive_heatmap("g")
+# Drug Azetidine
+interactive_heatmap("a")
+# Drug Fluconazole
+interactive_heatmap("f")
+# Drug Fluconazole
+interactive_heatmap("m")
+
 ```
 
+
+
+```{r heatshock_wt_norm}
+```
 ## Including Plots
 
 You can also embed plots, for example:
