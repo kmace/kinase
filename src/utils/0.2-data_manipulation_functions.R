@@ -42,3 +42,8 @@ reduce_genes_to_regulators = function(data, reg) {
     # the genes associated with a TF. and you may want to plot that. or stop there. THEN you want to
     # do some sort of agrigation of a TFs genes down into a single number to measure its activity.
 }
+
+rename_gene_names = function(matrix, t2g) {
+  rownames(matrix) = t2g$name[match(rownames(matrix), t2g$target_id)]
+  return(matrix)
+}
