@@ -54,7 +54,7 @@ dds = DESeq(dds)
 rld = rlog(dds, blind=FALSE)
 library(genefilter)
 topVarGenes <- head(order(rowVars(assay(rld)),decreasing=TRUE),200)
-mat <- assay(rld)[ topVarGenes, ]
+mat <- assay(rld)#[ topVarGenes, ]
 mat <- mat - rowMeans(mat)
 mat = rename_gene_names(mat,t2g)
 colnames(mat) = meta$Strain_Code

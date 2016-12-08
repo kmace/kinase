@@ -4,7 +4,7 @@ source('../utils/load_functions.R')
 
 t2g = load_transcripts_to_genes()
 meta = get_sample_meta()
-raw_counts = load_count_matrix(meta,'tophat')
+raw_counts = load_count_matrix(meta,'star')
 
 dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~1)
 
