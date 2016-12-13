@@ -63,6 +63,10 @@ dat = dat %>%
         group_by(Strain) %>% mutate(ts_st = normalize_it(top_speed)) %>% dplyr::ungroup() %>%
         group_by(Condition) %>% mutate(ts_cnd = normalize_it(top_speed)) %>% dplyr::ungroup()
 
+# dat = dat %>%
+#         group_by(Strain) %>% mutate(ts_st = normalize_it(top_speed)) %>% dplyr::ungroup() %>%
+#         group_by(Condition) %>% mutate(ts_cnd = normalize_it(top_speed)) %>% dplyr::ungroup()
+
 dat = dat %>% group_by(Strain) %>% mutate(ts_st_d = top_speed/mean(top_speed[Condition=='Drug']))
 
 pdf('../../output/growth.R/top_speed_by_condition.pdf')
