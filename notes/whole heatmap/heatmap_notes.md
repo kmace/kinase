@@ -1,43 +1,31 @@
-Notes for Morpheus analysis
+#Notes for Morpheus analysis
 
-Genes that are on in Tunicamycin, but are down in IRE1
-OXA1
-SWP1
-SEC13
-DPM1
-SEC24
-SEC61
-SEC31
-SEC23
+## Stress Specific analysis
 
-ERO1
-KAR2
-TAD2
-SCJ1
-VAC7
-YLH47
+### Tunicamycin
 
-PTM3
-ERP2
-SEC66
-JEM1
-LHS1
-SIL1
-TOS3
-PMT5
-EUG1
-ABP140
-SEC27
-FPR2
-KTR1
-GFA1
-YDR034C-D
-GWT1
-SEC59
+Genes that are on in Tunicamycin, but are down in IRE1:
+Manual = man_selelcted
+based on matrix method = down_reg_genes
+Its clear that IRE1 is the major Kinase associated with Tunicamycin.
 
-HIR3
-SPP382
-RRP43
-HLR1
-SEC12
-DFR1
+### Heatshock:
+
+Upregulated Heatshock genes seem to be down in the following strains:
+1. Tor2
+2. Pho85
+3. Ygk3
+
+One thing to notice is that Tor2 was a slower grower, so it may need some additional analysis to see if the genes are generally down.
+
+When looking at the 32 Genes specified by pincus: It seems that the most different Kinase samples are:
+
+1. Tor2
+2. Sch9
+3. Ygk3
+
+One other thing to note is that menadione seems to look a lot like heatshock generally. with heatshock genes being more highly expressed in that condition than in heatshock itself.
+
+see menadione analyis for whatever other insight is there.
+
+One thing I see as well, is if we use SSA1 as a source, and then find genes that are similar, (see close_to_ssa1_in_HS.txt) they are all heatshock related genes.
