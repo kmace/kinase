@@ -1,0 +1,48 @@
+---
+title: "Comparing Upregulated genes in conditions"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+
+# Data Import 
+```{r}
+source('../utils/load_libraries.R')
+source('../utils/load_functions.R')
+source('../utils/load_data.R')
+```
+
+# Get WT data
+```{r}
+#raw_counts = raw_counts[ ,meta$Strain=='WT']
+dds = dds[,colData(dds)$Strain == 'WT']
+meta = meta[meta$Strain=='WT',]
+dds = estimateSizeFactors(dds)
+dds_counts = counts(dds, normalized=TRUE)
+```
+# Get Conditions available
+These might have drug or no drug
+```{r}
+drugConditions = unique(meta[meta$Drug=="Cocktail"]$Condition)
+noDrugConditions = unique(meta[meta$Drug=='None']$Condition)
+```
+
+# Contrast genes
+We can perform this contrast in two ways. We can either see if the upregulated genes in Drug match those with no drug, or we can analyze each set individually, generating go terms for them.
+
+First thing is first. we need log foldchange with the appropriate baselines.
+
+Also here we are going to work on the mean for each condition. but I think it may be wise to look at each sample by sample comparrison individually. (use match for this)
+```{r}
+
+}
+contrast = c("Drug", "None", "Cocktail")
+baseline = c("None_YPD_None", "None_YPD_Cocktail")
+lapply(conditions, function(x) plot_ll(dds_counts,x,baseline))
+```
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
