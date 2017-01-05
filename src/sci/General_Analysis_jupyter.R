@@ -18,7 +18,7 @@ t2g = load_transcripts_to_genes()
 sample_meta = load_sample_meta_data()
 seq_meta = load_seq_meta_data()
 meta = right_join(sample_meta, seq_meta, by = c("Sample_Name" = "sample"))
-raw_counts = load_count_matrix(meta,'tophat')
+raw_counts = load_count_matrix(meta,'star')
 
 colnames(meta)
 
@@ -49,14 +49,14 @@ meta_pc = cbind(meta,pca$x[match(meta$Sample_Name,rownames(pca$x)),])
 
 library(repr)
 
-p1 = ggplot(meta_pc, aes(x=PC1, y=PC2)) 
-p2 = ggplot(meta_pc, aes(x=PC1, y=PC3)) 
-p3 = ggplot(meta_pc, aes(x=PC2, y=PC3)) 
+p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
+p2 = ggplot(meta_pc, aes(x=PC1, y=PC3))
+p3 = ggplot(meta_pc, aes(x=PC2, y=PC3))
 pdf('test.pdf')
 options(repr.plot.width=11, repr.plot.height=10)
-p1 + geom_point(shape = 21, aes(fill = Stress, colour=Drug), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
-p2 + geom_point(shape = 21, aes(fill = Stress, colour=Drug), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
-p3 + geom_point(shape = 21, aes(fill = Stress, colour=Drug), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
+p1 + geom_point(shape = 21, aes(fill = Stress), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
+p2 + geom_point(shape = 21, aes(fill = Stress), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
+p3 + geom_point(shape = 21, aes(fill = Stress), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
 dev.off()
 
 head(meta_pc)
@@ -77,11 +77,11 @@ p <- p %>% layout(
         list(method = "restyle",
              args = list("visible", list(T, T, T)),
              label = "Stress"),
-          
+
         list(method = "restyle",
              args = list("visible", list(F, T, F)),
              label = "Drug"),
- 
+
         list(method = "restyle",
              args = list("visible", list(F, F, T)),
              label = "Experimenter")))
@@ -102,7 +102,7 @@ plot(apply(pca$x,2,function(x)  entropy(discretize(x, numBins=5), unit="log2")),
 
 #hist(pca$x[,170])
 
-information_plot = function (data, upper = TRUE) 
+information_plot = function (data, upper = TRUE)
 {
     cormat <- cor(data)
     cormat <- reorder_cormat(cormat)
@@ -113,20 +113,20 @@ information_plot = function (data, upper = TRUE)
     else {
         melted_cormat <- melt(cormat, na.rm = TRUE)
     }
-    g = ggplot(melted_cormat, aes(Var2, Var1, fill = value)) + 
-        geom_tile(color = "white") + scale_fill_gradient2(low = "blue", 
-        high = "red", mid = "white", midpoint = 0, limit = c(-1, 
-            1), space = "Lab", name = "Pearson\nCorrelation") + 
-        theme_minimal() + theme(axis.text.x = element_text(angle = 45, 
+    g = ggplot(melted_cormat, aes(Var2, Var1, fill = value)) +
+        geom_tile(color = "white") + scale_fill_gradient2(low = "blue",
+        high = "red", mid = "white", midpoint = 0, limit = c(-1,
+            1), space = "Lab", name = "Pearson\nCorrelation") +
+        theme_minimal() + theme(axis.text.x = element_text(angle = 45,
         vjust = 1, size = 7, hjust = 1)) + coord_fixed()
     if (dim(cormat)[1] < 100) {
-        g = g + geom_text(aes(Var2, Var1, label = round(value, 
-            2)), color = "black", size = 1.5) + theme(axis.title.x = element_blank(), 
-            axis.title.y = element_blank(), panel.grid.major = element_blank(), 
-            panel.border = element_blank(), panel.background = element_blank(), 
-            axis.ticks = element_blank(), legend.justification = c(1, 
-                0), legend.position = c(0.6, 0.7), legend.direction = "horizontal") + 
-            guides(fill = guide_colorbar(barwidth = 7, barheight = 1, 
+        g = g + geom_text(aes(Var2, Var1, label = round(value,
+            2)), color = "black", size = 1.5) + theme(axis.title.x = element_blank(),
+            axis.title.y = element_blank(), panel.grid.major = element_blank(),
+            panel.border = element_blank(), panel.background = element_blank(),
+            axis.ticks = element_blank(), legend.justification = c(1,
+                0), legend.position = c(0.6, 0.7), legend.direction = "horizontal") +
+            guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
                 title.position = "top", title.hjust = 0.5))
     }
     return(g)
@@ -153,11 +153,9 @@ colors = rainbow(length(unique(iris$Species)))
 library(tsne)
 colors = rainbow(length(unique(meta$Plate_Code)))
 names(colors) = unique(meta$Plate_Code)
-ecb = function(x,y){ 
-    plot(x,t='n'); 
-    text(x,labels=meta$Plate_Code, col=colors[meta$Plate_Code]) 
-} 
+ecb = function(x,y){
+    plot(x,t='n');
+    text(x,labels=meta$Plate_Code, col=colors[meta$Plate_Code])
+}
 
 tsne_iris = tsne(t(x[select, ]), epoch_callback = ecb, perplexity=50)
-
-
