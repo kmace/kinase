@@ -12,10 +12,7 @@ stress_one_hot.shape
 # In[40]:
 expression = expression.transpose()
 expression.shape
-# In[55]:
-from __future__ import print_function
 
-import numpy as np
 import tflearn
 
 target = expression
@@ -36,6 +33,6 @@ regression = tflearn.regression(net, optimizer=adam, loss='mean_square')
 # Define model
 model = tflearn.DNN(net)
 # Start training (apply gradient descent algorithm)
-model.fit(data, target, n_epoch=10, batch_size=16, show_metric=True)
+model.fit(data, target, n_epoch=100000, batch_size=300, show_metric=True)
 
 # Let's create some data for DiCaprio and Winslet
