@@ -15,14 +15,22 @@ library(glmnet)
 fit1 = glmnet(dictionary,target[,1])
 
 get_10_c = function(y) {
-  c = coef(glmnet(dictionary,y,dfmax=10))
-  last_c = dim(c)[2]
-  return(c[,last_c])
+  # exp(-4) from concervitave look at cv.glmnet
+  #c = coef(glmnet(dictionary,y,lambda=exp(-4)))
+  return(coef(glmnet(dictionary,y,lambda=0.3437)))
+  #last_c = dim(c)[2]
+  #return(c[,last_c])
 }
 
 all_c = apply(target,2,get_10_c)
-top_features = names(sort(apply(all_c,1,function(x) sum(abs(x))),decreasing=T)[1:50])
-b = all_c[top_features,]
-d = dictionary[,rownames(b)]
-m = mldivide(d,target)
+c = do.call(cbind,lapply(all_c,as.matrix))
+plot((sort(apply(c,1,function(x) sum(abs(x))),decreasing=T)))
+top_features = names(sort(apply(c,1,function(x) sum(abs(x))),decreasing=T)[1:40])#400])
+top_idx = which(rownames(c) %in% top_features)
+top_dictionary = dictionary[,top_idx]
+top_c = c[top_idx,]
+#top_features = names(sort(apply(all_c,1,function(x) sum(abs(x))),decreasing=T)[1:50])
+#b = all_c[top_features,]
+
+m = mldivide(top_dictionary,target)
 d3heatmap(m,col=viridis(20))
