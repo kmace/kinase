@@ -23,11 +23,15 @@ target = np.array(expression, dtype='float32')
 data = stress_one_hot
 data = np.array(data, dtype='float32')
 
+adam = tflearn.Adam(learning_rate=0.000001, beta1=0.99)
+
 # Build neural network
 net = tflearn.input_data(shape=[None, 9])
 net = tflearn.fully_connected(net, 32)
 net = tflearn.fully_connected(net, 6692)
-net = tflearn.regression(net)
+
+regression = tflearn.regression(net, optimizer=adam, loss='mean_square')
+
 
 # Define model
 model = tflearn.DNN(net)
