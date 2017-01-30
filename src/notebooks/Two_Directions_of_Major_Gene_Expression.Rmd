@@ -100,3 +100,20 @@ If this is true, I might expect that for each individual condition, the PKA and 
   
 ```
   
+  
+One thing we definitely need to look at is how much of the variance is explained in the first two PCs? are we talking the whole thing? or just a part of it?
+
+```{r}
+plot(summary(pca)$importance[3,], 
+     main='Percentage of Variance Explained',
+     xlab='PCs',
+     ylab='Cumulative Percentage of Variance Explained',
+     type='l')
+
+plot(summary(pca)$importance[3,1:5], 
+     main='Percentage of Variance Explained',
+     xlab='PCs',
+     ylab='Cumulative Percentage of Variance Explained',
+     type='l',
+     ylim=c(0,1))
+```
