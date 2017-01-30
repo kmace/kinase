@@ -37,4 +37,3 @@ writeGCT <- function (data,
     write.table (m, file = f, append = TRUE, quote = FALSE, sep = "\t",
                  eol = "\n", col.names = FALSE, row.names = FALSE)
 }
-writeGCT(data,row_metadata,col_metadata,'test.gct')
