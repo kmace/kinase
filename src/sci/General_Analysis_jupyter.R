@@ -1,24 +1,7 @@
+source('../utils/load_libraries.R')
+source('../utils/load_functions.R')
+source('../utils/load_data.R')
 
-library(DESeq2)
-library(dplyr)
-library(ggplot2)
-library(biomaRt)
-library(viridis)
-library(tidyr)
-library(genefilter)
-library(ggrepel)
-library(plotly)
-library(Glimma)
-
-source('0.1-data_loading_functions.R')
-source('0.2-data_manipulation_functions.R')
-source('0.3-plotting_functions.R')
-
-t2g = load_transcripts_to_genes()
-sample_meta = load_sample_meta_data()
-seq_meta = load_seq_meta_data()
-meta = right_join(sample_meta, seq_meta, by = c("Sample_Name" = "sample"))
-raw_counts = load_count_matrix(meta,'star')
 
 colnames(meta)
 
