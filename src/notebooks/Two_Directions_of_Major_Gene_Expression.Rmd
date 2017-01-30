@@ -1,0 +1,102 @@
+---
+title: "Two Directions of Major Gene Expression"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r,message=FALSE, echo=FALSE}
+source('../utils/load_libraries.R')
+```
+
+```{r, message=FALSE, echo=FALSE, cache=TRUE}
+source('../utils/load_functions.R')
+source('../utils/load_data.R')
+```
+
+Let's look at the samples that have been inhibited:
+
+```{r}
+# Filter
+vsd = vsd[,colData(vsd)$Drug == 'Cocktail']
+meta = colData(vsd)
+meta = as.data.frame(meta)
+meta = meta %>% mutate(Condition = if_else(Stress=='None',                                                             as.character(Media),
+                                           as.character(Stress)
+                                          ))
+meta$Condition = as.factor(meta$Condition)
+x = assay(vsd)
+colnames(x) = meta$Sample_Name
+```
+
+Let us also filter, keeping most, but increaseing the variance:
+
+```{r}
+rv = genefilter::rowVars(x)
+select = order(rv, decreasing = TRUE)[seq_len(4000)]
+x = x[select, ]
+```
+
+Let's now look at how the Principal Components of the genes separate the samples:
+
+```{r}
+pca = prcomp(t(x))
+meta_pc = cbind(as.data.frame(meta),
+                as.data.frame(
+                  pca$x[match(meta$Sample_Name,rownames(pca$x)),]
+                  ))
+
+p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
+p1 + geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
+```
+
+We see that the first two principal components create a triangular scatter, with 3 conditions in the corners:
+
+* No Stress
+* Glucose Dropout
+* Rapamycin
+
+Lets look at these 3 conditions:
+
+```{r}
+  for(s in c('YPD', 'Glucose Depletion', 'Rapamycin')) {
+  plot = p1 + 
+    geom_point(data = subset(meta_pc, Condition == s), 
+                  aes(fill = Condition),
+                  shape = 21, 
+                  size=4, stroke=1) + 
+    geom_text(aes(label=Strain), 
+              size=1) + 
+    scale_fill_discrete(drop = FALSE) +
+    labs(title = s)  
+  print(plot)
+  }
+  
+```
+
+This is interesting, Not only are these conditions the most extream in terms of distance from No Stress, they are also considered the cononical activators of two major Kinases: PKA and TOR.
+
+I therefore hypothesize that these directions in PC space represent the PKA, and TOR pathways.
+
+If this is true, I might expect that for each individual condition, the PKA and TOR2 strains would be offset from the group in the same direction as these pathways. lets check that out:
+
+```{r}
+  for(s in levels(meta$Condition)) {
+  plot = p1 + 
+    geom_point(data = subset(meta_pc, Condition == s), 
+                  aes(fill = Condition,
+                      size = if_else(Strain %in% c('TPK123','TOR2'),4,2),
+                      color = if_else(Strain %in% c('TPK123','TOR2'),2,1)),
+                  shape = 21, 
+                  stroke=1) + 
+    geom_text(aes(label=Strain), 
+              size=1) + 
+    scale_fill_discrete(drop = FALSE) +
+    labs(title = s) +
+    guides(size=FALSE, color=FALSE) +
+    scale_size(range = c(3, 7))
+  print(plot)
+  }
+  
+```
+  
