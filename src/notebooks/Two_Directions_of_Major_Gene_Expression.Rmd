@@ -142,6 +142,9 @@ PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7%
 ```{r}
 gasch = read.table('../../input/reference/gasch/pickGenes/imputed_gasch_data.txt', header=T, row.names = 1)
 gmeta = read.csv('../../input/meta/gasch_meta.csv')
+Stress_after = as.character(gmeta$Stress)
+Stress_after[gmeta$Time<10] = 'Pre-response'
+gmeta$Stress_after = factor(Stress_after)
 x = gasch
 rv = genefilter::rowVars(x)
 select = order(rv, decreasing = TRUE)[seq_len(4000)]
@@ -154,11 +157,13 @@ meta_pc = cbind(as.data.frame(gmeta),
                   ))
 
 p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
-p1 + geom_point(shape = 21, aes(fill = Stress), size=4, stroke=1)
+p1 + geom_point(shape = 21, aes(fill = Stress_after), size=4, stroke=1) + geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), na.rm = FALSE, size=2) 
+
 ```
 
+
+
 ```{r}
-library(ggvis)
 all_values <- function(x) {
   if(is.null(x)) return(NULL)
   row <- meta_pc[meta_pc$Sample_Name == x$Sample_Name, ]
