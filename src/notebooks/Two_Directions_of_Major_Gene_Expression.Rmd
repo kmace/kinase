@@ -131,7 +131,7 @@ barplot(summary(pca)$importance[2,1:10],
 So we can see that the first two give big gains. 
 
 ```{r}
-summary(pca)$importance[2,1:10]
+100 * summary(pca)$importance[2,1:9]
 ```
 
 PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7%
@@ -157,3 +157,49 @@ p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
 p1 + geom_point(shape = 21, aes(fill = Stress), size=4, stroke=1)
 ```
 
+```{r}
+library(ggvis)
+all_values <- function(x) {
+  if(is.null(x)) return(NULL)
+  row <- meta_pc[meta_pc$Sample_Name == x$Sample_Name, ]
+  paste0(names(row[1:2]), ": ", format(row[1:2]), collapse = "<br />")
+  #return(x$Sample_Name)
+}
+
+meta_pc %>% 
+   ggvis(x = ~PC1,
+         y = ~PC3,
+         key := ~Sample_Name) %>% 
+   layer_points(fill = ~factor(Stress)) %>%
+   add_tooltip(all_values, "hover")
+   #add_tooltip(function(x) paste0(as.character(x$Stress), ' : ', x$Sample_Name, collapse = "<br />"), "hover")
+   
+```
+
+Now lets also look at the PCs
+
+```{r}
+plot(summary(pca)$importance[3,], 
+     main='Percentage of Variance Explained',
+     xlab='PCs',
+     ylab='Cumulative Percentage of Variance Explained',
+     type='l')
+
+plot(summary(pca)$importance[3,1:5], 
+     main='Percentage of Variance Explained',
+     xlab='PCs',
+     ylab='Cumulative Percentage of Variance Explained',
+     type='l',
+     ylim=c(0,1))
+
+barplot(summary(pca)$importance[2,1:10], 
+     main='Percentage of Variance Explained',
+     xlab='PCs',
+     ylab='Percentage of Variance Explained',
+     ylim=c(0,1))
+
+100 * summary(pca)$importance[2,1:9]
+
+
+
+```
