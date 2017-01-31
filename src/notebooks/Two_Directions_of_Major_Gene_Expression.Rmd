@@ -1,5 +1,5 @@
 ---
-title: "Two Directions of Major Gene Expression"
+title: "Hypothesis: General Stress Response is primarily a linear combination of two programs"
 output:
   html_document: default
   html_notebook: default
@@ -13,6 +13,8 @@ source('../utils/load_libraries.R')
 source('../utils/load_functions.R')
 source('../utils/load_data.R')
 ```
+
+# General Overview
 
 Let's look at the samples that have been inhibited:
 
@@ -36,6 +38,8 @@ rv = genefilter::rowVars(x)
 select = order(rv, decreasing = TRUE)[seq_len(4000)]
 x = x[select, ]
 ```
+
+# Prinicipal Component Decomposition
 
 Let's now look at how the Principal Components of the genes separate the samples:
 
@@ -131,3 +135,25 @@ summary(pca)$importance[2,1:10]
 ```
 
 PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7%
+
+
+# Looking at Gasch Data
+
+```{r}
+gasch = read.table('../../input/reference/gasch/pickGenes/imputed_gasch_data.txt', header=T, row.names = 1)
+gmeta = read.csv('../../input/meta/gasch_meta.csv')
+x = gasch
+rv = genefilter::rowVars(x)
+select = order(rv, decreasing = TRUE)[seq_len(4000)]
+x = x[select, ]
+colnames(x) = gmeta$Sample_Name
+pca = prcomp(t(x))
+meta_pc = cbind(as.data.frame(gmeta),
+                as.data.frame(
+                  pca$x[match(gmeta$Sample_Name,rownames(pca$x)),]
+                  ))
+
+p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
+p1 + geom_point(shape = 21, aes(fill = Stress), size=4, stroke=1)
+```
+
