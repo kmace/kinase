@@ -30,6 +30,7 @@ meta = meta %>% mutate(Condition = if_else(Stress=='None',                      
                                           ))
 meta$Condition = as.factor(meta$Condition)
 x = assay(vsd)
+x = x - rowMeans(x)
 colnames(x) = meta$Sample_Name
 ```
 
@@ -147,18 +148,19 @@ gmeta = read.csv('../../input/meta/gasch_meta.csv')
 Stress_after = as.character(gmeta$Stress)
 Stress_after[gmeta$Time<10] = 'Pre-response'
 gmeta$Stress_after = factor(Stress_after)
-x = gasch
-rv = genefilter::rowVars(x)
+gx = gasch
+gx = gx - rowMeans(gx)
+rv = genefilter::rowVars(gx)
 select = order(rv, decreasing = TRUE)[seq_len(4000)]
-x = x[select, ]
-colnames(x) = gmeta$Sample_Name
-pca = prcomp(t(x))
-meta_pc = cbind(as.data.frame(gmeta),
+gx = gx[select, ]
+colnames(gx) = gmeta$Sample_Name
+pca = prcomp(t(gx))
+gmeta_pc = cbind(as.data.frame(gmeta),
                 as.data.frame(
                   pca$x[match(gmeta$Sample_Name,rownames(pca$x)),]
                   ))
 
-p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
+p1 = ggplot(gmeta_pc, aes(x=PC1, y=PC2))
 p1 + geom_point(shape = 21, aes(fill = Stress_after), size=4, stroke=1) + geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), na.rm = FALSE, size=2) 
 
 ```
@@ -173,7 +175,7 @@ all_values <- function(x) {
   #return(x$Sample_Name)
 }
 
-meta_pc %>% 
+gmeta_pc %>% 
    ggvis(x = ~PC1,
          y = ~PC3,
          key := ~Sample_Name) %>% 
@@ -225,21 +227,45 @@ gmeta$Stress_after = factor(Stress_after)
 really_long = which(gmeta$Time >= 600)
 gasch = gasch[ ,-really_long]
 gmeta = gmeta[-really_long, ]
-x = gasch
-rv = genefilter::rowVars(x)
+gx = gasch
+rv = genefilter::rowVars(gx)
 select = order(rv, decreasing = TRUE)[seq_len(4000)]
-x = x[select, ]
-colnames(x) = gmeta$Sample_Name
-pca = prcomp(t(x))
-meta_pc = cbind(as.data.frame(gmeta),
+gx = gx[select, ]
+colnames(gx) = gmeta$Sample_Name
+gpca = prcomp(t(gx))
+gmeta_pc = cbind(as.data.frame(gmeta),
                 as.data.frame(
                   pca$x[match(gmeta$Sample_Name,rownames(pca$x)),]
                   ))
 
-p1 = ggplot(meta_pc, aes(x=PC1, y=PC2)) + geom_point(shape = 21, aes(fill = Stress_after), size=4, stroke=1) + geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), na.rm = FALSE, size=2) 
-
-ggplotly(p1)
+p1 = ggplot(gmeta_pc, aes(x=PC1, 
+                         y=-PC6, 
+                         label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)), 
+                         fill = Stress_after)) + geom_point(shape = 21, size=4, stroke=1) + geom_text(na.rm = FALSE, size=1.5) 
+# You can click the circles to make them go away!
+ggplotly(p1, tooltip = c("y", "x", "Time", 'fill'))
 ```
 
 
-test
+Can we compare the PCs of each dataset?
+
+```{r}
+x = assay(vsd)
+gx = gasch
+x = x - rowMeans(x)
+gx = gx - rowMeans(gx)
+
+gx = gx[rownames(gx) %in% rownames(x),]
+x = x[rownames(gx),]
+
+pca = prcomp(t(x))
+gpca = prcomp(t(gx))
+
+sim = cor(pca$rotation, gpca$rotation)
+
+# Lets ask which PC in gasch is most similar to a PC in my data
+g_to_x_pc_mapping = colnames(sim)[apply(abs(sim),1,which.max)]
+# and lets also ask the opposite:
+x_to_g_pc_mapping = rownames(sim)[apply(abs(sim),2,which.max)]
+
+```
