@@ -15,6 +15,9 @@ list.of.cran.packages = c(
 'UpSetR',
 'viridis',
 'vsn'
+'ggvis',
+'plotly',
+
 )
 
 list.of.bioc.packages = c(

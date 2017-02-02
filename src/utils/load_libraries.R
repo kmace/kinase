@@ -27,5 +27,7 @@ library(UpSetR)
 library(viridis)
 library(vsn)
 
+library(ggvis)
+library(plotly)
 rename = dplyr::rename
 select = dplyr::select
