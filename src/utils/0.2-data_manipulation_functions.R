@@ -47,3 +47,23 @@ rename_gene_names = function(matrix, t2g) {
   rownames(matrix) = t2g$name[match(rownames(matrix), t2g$target_id)]
   return(matrix)
 }
+
+average_duplicate_genes = function(data){
+  dups = unique(rownames(data)[which(!isUnique(rownames(data)))])
+  genes = unique(rownames(data))
+  cond = colnames(data)
+  ave_data = matrix(NA, nrow=length(genes), ncol = length(cond))
+  ave_data = as.data.frame(ave_data)
+  rownames(ave_data) = genes
+  colnames(ave_data) = cond
+  
+  genes_not_in_dups = rownames(data)[which(isUnique(rownames(data)))]
+  ave_data[genes_not_in_dups,] = data[genes_not_in_dups,]
+  
+  for(i in 1:length(genes)){
+    if(genes[i] %in% dups){
+      ave_data[genes[i],] = apply(data[which(rownames(data) == genes[i]),],2,function(x) mean(x, na.rm = T))
+    }
+  }
+  return(ave_data)
+}
