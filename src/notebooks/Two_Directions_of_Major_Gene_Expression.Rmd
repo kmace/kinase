@@ -7,8 +7,6 @@ output:
 
 ```{r,message=FALSE, echo=FALSE}
 source('../utils/load_libraries.R')
-library(ggvis)
-library(plotly)
 ```
 
 ```{r, message=FALSE, echo=FALSE, cache=TRUE}
@@ -37,9 +35,9 @@ colnames(x) = meta$Sample_Name
 Let us also filter, keeping most, but increaseing the variance:
 
 ```{r}
-rv = genefilter::rowVars(x)
-select = order(rv, decreasing = TRUE)[seq_len(4000)]
-x = x[select, ]
+# rv = genefilter::rowVars(x)
+# select = order(rv, decreasing = TRUE)[seq_len(4000)]
+# x = x[select, ]
 ```
 
 # Prinicipal Component Decomposition
@@ -54,7 +52,11 @@ meta_pc = cbind(as.data.frame(meta),
                   ))
 
 p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
-p1 + geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) + geom_text(aes(label=Strain), size=1)
+p2 = p1 + 
+       geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
+       geom_text(aes(label=Strain), size=1)
+print(p2)
+ggplotly(p2)
 ```
 
 We see that the first two principal components create a triangular scatter, with 3 conditions in the corners:
