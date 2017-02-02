@@ -23,7 +23,8 @@ Let's look at the samples that have been inhibited:
 vsd = vsd[,colData(vsd)$Drug == 'Cocktail']
 meta = colData(vsd)
 meta = as.data.frame(meta)
-meta = meta %>% mutate(Condition = if_else(Stress=='None',                                                             as.character(Media),
+meta = meta %>% mutate(Condition = if_else(Stress=='None',
+                                           as.character(Media),
                                            as.character(Stress)
                                           ))
 meta$Condition = as.factor(meta$Condition)
@@ -52,7 +53,7 @@ meta_pc = cbind(as.data.frame(meta),
                   ))
 
 p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
-p2 = p1 + 
+p2 = p1 +
        geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
        geom_text(aes(label=Strain), size=1)
 print(p2)
@@ -69,18 +70,18 @@ Lets look at these 3 conditions:
 
 ```{r}
   for(s in c('YPD', 'Glucose Depletion', 'Rapamycin')) {
-  plot = p1 + 
-    geom_point(data = subset(meta_pc, Condition == s), 
+  plot = p1 +
+    geom_point(data = subset(meta_pc, Condition == s),
                   aes(fill = Condition),
-                  shape = 21, 
-                  size=4, stroke=1) + 
-    geom_text(aes(label=Strain), 
-              size=1) + 
+                  shape = 21,
+                  size=4, stroke=1) +
+    geom_text(aes(label=Strain),
+              size=1) +
     scale_fill_discrete(drop = FALSE) +
     labs(title = s)  
   print(plot)
   }
-  
+
 ```
 
 This is interesting, Not only are these conditions the most extream in terms of distance from No Stress, they are also considered the cononical activators of two major Kinases: PKA and TOR.
@@ -91,49 +92,49 @@ If this is true, I might expect that for each individual condition, the PKA and 
 
 ```{r}
   for(s in levels(meta$Condition)) {
-  plot = p1 + 
-    geom_point(data = subset(meta_pc, Condition == s), 
+  plot = p1 +
+    geom_point(data = subset(meta_pc, Condition == s),
                   aes(fill = Condition,
                       size = if_else(Strain %in% c('TPK123','TOR2'),4,2),
                       color = if_else(Strain %in% c('TPK123','TOR2'),2,1)),
-                  shape = 21, 
-                  stroke=1) + 
-    geom_text(aes(label=Strain), 
-              size=1) + 
+                  shape = 21,
+                  stroke=1) +
+    geom_text(aes(label=Strain),
+              size=1) +
     scale_fill_discrete(drop = FALSE) +
     labs(title = s) +
     guides(size=FALSE, color=FALSE) +
     scale_size(range = c(3, 7))
   print(plot)
   }
-  
+
 ```
-  
-  
+
+
 One thing we definitely need to look at is how much of the variance is explained in the first two PCs? are we talking the whole thing? or just a part of it?
 
 ```{r}
-plot(summary(pca)$importance[3,], 
+plot(summary(pca)$importance[3,],
      main='Percentage of Variance Explained',
      xlab='PCs',
      ylab='Cumulative Percentage of Variance Explained',
      type='l')
 
-plot(summary(pca)$importance[3,1:5], 
+plot(summary(pca)$importance[3,1:5],
      main='Percentage of Variance Explained',
      xlab='PCs',
      ylab='Cumulative Percentage of Variance Explained',
      type='l',
      ylim=c(0,1))
 
-barplot(summary(pca)$importance[2,1:10], 
+barplot(summary(pca)$importance[2,1:10],
      main='Percentage of Variance Explained',
      xlab='PCs',
      ylab='Percentage of Variance Explained',
      ylim=c(0,1))
 ```
 
-So we can see that the first two give big gains. 
+So we can see that the first two give big gains.
 
 ```{r}
 100 * summary(pca)$importance[2,1:9]
@@ -142,8 +143,8 @@ So we can see that the first two give big gains.
 PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7%
 
 
-# Looking at Gasch Data
-
+# Looking at Gasch and Pronk Data
+## Gasch
 ```{r}
 gasch = read.table('../../input/reference/gasch/pickGenes/imputed_gasch_data.txt', header=T, row.names = 1)
 gmeta = read.csv('../../input/meta/gasch_meta.csv')
@@ -152,10 +153,12 @@ Stress_after[gmeta$Time<10] = 'Pre-response'
 gmeta$Stress_after = factor(Stress_after)
 gx = gasch
 gx = gx - rowMeans(gx)
-rv = genefilter::rowVars(gx)
-select = order(rv, decreasing = TRUE)[seq_len(4000)]
-gx = gx[select, ]
+# rv = genefilter::rowVars(gx)
+# select = order(rv, decreasing = TRUE)[seq_len(4000)]
+# gx = gx[select, ]
 colnames(gx) = gmeta$Sample_Name
+
+
 pca = prcomp(t(gx))
 gmeta_pc = cbind(as.data.frame(gmeta),
                 as.data.frame(
@@ -163,47 +166,27 @@ gmeta_pc = cbind(as.data.frame(gmeta),
                   ))
 
 p1 = ggplot(gmeta_pc, aes(x=PC1, y=PC2))
-p1 + geom_point(shape = 21, aes(fill = Stress_after), size=4, stroke=1) + geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), na.rm = FALSE, size=2) 
+p1 + geom_point(shape = 21, aes(fill = Stress_after), size=4, stroke=1) + geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), na.rm = FALSE, size=2)
 
-```
-
-
-
-```{r}
-all_values <- function(x) {
-  if(is.null(x)) return(NULL)
-  row <- meta_pc[meta_pc$Sample_Name == x$Sample_Name, ]
-  paste0(names(row[1:2]), ": ", format(row[1:2]), collapse = "<br />")
-  #return(x$Sample_Name)
-}
-
-gmeta_pc %>% 
-   ggvis(x = ~PC1,
-         y = ~PC3,
-         key := ~Sample_Name) %>% 
-   layer_points(fill = ~factor(Stress)) %>%
-   add_tooltip(all_values, "hover")
-   #add_tooltip(function(x) paste0(as.character(x$Stress), ' : ', x$Sample_Name, collapse = "<br />"), "hover")
-   
 ```
 
 Now lets also look at the PCs
 
 ```{r}
-plot(summary(pca)$importance[3,], 
+plot(summary(pca)$importance[3,],
      main='Percentage of Variance Explained',
      xlab='PCs',
      ylab='Cumulative Percentage of Variance Explained',
      type='l')
 
-plot(summary(pca)$importance[3,1:5], 
+plot(summary(pca)$importance[3,1:5],
      main='Percentage of Variance Explained',
      xlab='PCs',
      ylab='Cumulative Percentage of Variance Explained',
      type='l',
      ylim=c(0,1))
 
-barplot(summary(pca)$importance[2,1:10], 
+barplot(summary(pca)$importance[2,1:10],
      main='Percentage of Variance Explained',
      xlab='PCs',
      ylab='Percentage of Variance Explained',
@@ -215,9 +198,80 @@ barplot(summary(pca)$importance[2,1:10],
 
 ```
 
+## Pronk
+
+```{r}
+library(Biobase)
+library(GEOquery)
+library(impute)
+library(ggplot2)
+source('../utils/0.2-data_manipulation_functions.R')
+gset <- getGEO("GSE11452", GSEMatrix =TRUE, getGPL=FALSE)
+if (length(gset) > 1) idx <- grep("GPL90", attr(gset, "names")) else idx <- 1
+gset <- gset[[idx]]
+pmeta = pData(gset)
+px = exprs(gset)
+p2t = read.table('../../input/reference/GPL_to_ORF.tsv', fill=T, header=T, stringsAsFactors=F)
+rownames(px) = p2t[,2]
+px = px[rownames(px) != '',]
+px = log2(px + 0.0001) # smallest nonzero is 2^-12
+#px = impute.knn(px)$data
+px = px - rowMeans(px)
+px = average_duplicate_genes(px)
+
+# rv = genefilter::rowVars(gx)
+# select = order(rv, decreasing = TRUE)[seq_len(4000)]
+# gx = gx[select, ]
+colnames(px) = pmeta$title
 
 
-what about the guys who arent more than 10 hours long?
+ppca = prcomp(t(px))
+pmeta_pc = cbind(as.data.frame(pmeta),
+                as.data.frame(
+                  ppca$x[match(pmeta$title,rownames(ppca$x)),]
+                  ))
+
+p1 = ggplot(pmeta_pc, aes(x=PC1, y=PC2))
+p1 + geom_point(shape = 21, size=4, stroke=1)
+```
+
+```{r}
+gasch = read.table('../../input/reference/gasch_complete_dataset.txt', header=T, sep='\t', quote="", row.names=1, stringsAsFactors=F)
+
+g_info = gasch[,"NAME"]
+gmeta = read.csv('../../input/meta/gasch_meta.csv')
+Stress_after = as.character(gmeta$Stress)
+Stress_after[gmeta$Time<10] = 'Pre-response'
+gmeta$Stress_after = factor(Stress_after)
+
+gx = gasch[,-c(1,2)]
+gx = impute.knn(as.matrix(gx))$data
+gx = gx - rowMeans(gx)
+
+
+# rv = genefilter::rowVars(gx)
+# select = order(rv, decreasing = TRUE)[seq_len(4000)]
+# gx = gx[select, ]
+
+
+
+gpca = prcomp(t(gx))
+gmeta_pc = cbind(as.data.frame(gmeta),
+                as.data.frame(
+                  gpca$x[match(gmeta$Sample_Name,rownames(gpca$x)),]
+                  ))
+
+p1 = ggplot(gmeta_pc, aes(x=PC1, y=PC2))
+p1 + geom_point(shape = 21, size=4, stroke=1)
+```
+
+
+
+
+
+
+
+<!-- what about the guys who arent more than 10 hours long?
 
 ```{r, fig.width=10}
 gasch = read.table('../../input/reference/gasch/pickGenes/imputed_gasch_data.txt', header=T, row.names = 1)
@@ -240,20 +294,21 @@ gmeta_pc = cbind(as.data.frame(gmeta),
                   pca$x[match(gmeta$Sample_Name,rownames(pca$x)),]
                   ))
 
-p1 = ggplot(gmeta_pc, aes(x=PC1, 
-                         y=-PC6, 
-                         label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)), 
-                         fill = Stress_after)) + geom_point(shape = 21, size=4, stroke=1) + geom_text(na.rm = FALSE, size=1.5) 
+p1 = ggplot(gmeta_pc, aes(x=PC1,
+                         y=-PC6,
+                         label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)),
+                         fill = Stress_after)) + geom_point(shape = 21, size=4, stroke=1) + geom_text(na.rm = FALSE, size=1.5)
 # You can click the circles to make them go away!
 ggplotly(p1, tooltip = c("y", "x", "Time", 'fill'))
 ```
-
+ -->
 
 Can we compare the PCs of each dataset?
 
 ```{r}
 x = assay(vsd)
 gx = gasch
+px =
 x = x - rowMeans(x)
 gx = gx - rowMeans(gx)
 
@@ -269,5 +324,17 @@ sim = cor(pca$rotation, gpca$rotation)
 g_to_x_pc_mapping = colnames(sim)[apply(abs(sim),1,which.max)]
 # and lets also ask the opposite:
 x_to_g_pc_mapping = rownames(sim)[apply(abs(sim),2,which.max)]
+
+g_onx = predict(pca,t(gx))
+gmeta_on_x = cbind(gmeta, g_onx)
+
+p1 = ggplot(gmeta_on_x, aes(x=PC1,
+                         y=PC2,
+                         label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)),
+                         fill = Stress_after)) + geom_point(shape = 21, size=4, stroke=1) + geom_text(na.rm = FALSE, size=1.5)
+# You can click the circles to make them go away!
+ggplotly(p1, tooltip = c("y", "x", "Time", 'fill'))
+
+
 
 ```
