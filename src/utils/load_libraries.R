@@ -1,6 +1,11 @@
 # Load library without messages
 message("\nLoading required R packages ....")
 #suppressMessages(library(DESeq2))
+
+library(Biobase)
+library(GEOquery)
+library(impute)
+
 library(biomaRt)
 library(DESeq2)
 library(dplyr)
