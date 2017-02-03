@@ -1,23 +1,21 @@
 ---
-title: "Hypothesis: General Stress Response is primarily a linear combination of two programs"
+title: "Global Analysis of Kinase Drivers of the Yeast Stress Response"
 output:
   html_document: default
   html_notebook: default
+  pdf_document: default
 ---
 
 ```{r,message=FALSE, echo=FALSE}
 source('../utils/load_libraries.R')
 ```
 
-```{r, message=FALSE, echo=FALSE, cache=TRUE}
+```{r, message=FALSE, echo=FALSE, cache=FALSE}
 source('../utils/load_functions.R')
 source('../utils/load_data.R')
 ```
-
-# General Overview
-
-Let's look at the samples that have been inhibited:
-
+# Setup
+We will be condsidering the samples that have been inhibited:
 ```{r}
 # Filter
 vsd = vsd[,colData(vsd)$Drug == 'Cocktail']
@@ -31,239 +29,186 @@ meta$Condition = as.factor(meta$Condition)
 x = assay(vsd)
 x = x - rowMeans(x)
 colnames(x) = meta$Sample_Name
+
+gasch = load_gasch()
+gx = gasch$data
+gmeta = gasch$meta
+
+pronk = load_pronk()
+px = pronk$data
+pmeta = pronk$meta
+
+common_genes = Reduce(intersect, 
+                      list(rownames(gx), 
+                           rownames(x), 
+                           rownames(px)))
+
+x = x[common_genes, ]
+gx = gx[common_genes, ]
+px = px[common_genes, ]
 ```
-
-Let us also filter, keeping most, but increaseing the variance:
-
-```{r}
-# rv = genefilter::rowVars(x)
-# select = order(rv, decreasing = TRUE)[seq_len(4000)]
-# x = x[select, ]
-```
-
-# Prinicipal Component Decomposition
-
-Let's now look at how the Principal Components of the genes separate the samples:
-
+# Overview
+##Prinicipal Component Decomposition
 ```{r}
 pca = prcomp(t(x))
 meta_pc = cbind(as.data.frame(meta),
                 as.data.frame(
                   pca$x[match(meta$Sample_Name,rownames(pca$x)),]
                   ))
+```
+First, let look at how much variance is explained by each PC:
+```{r}
+barplot(summary(pca)$importance[2,1:10],
+     main='Percentage of Variance Explained',
+     xlab='PCs',
+     ylab='Percentage of Variance Explained',
+     ylim=c(0,1))
+100 * summary(pca)$importance[2,1:9]
+```
+PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7% of the variance.
 
-p1 = ggplot(meta_pc, aes(x=PC1, y=PC2))
-p2 = p1 +
+Let's now look at how the first two Principal Component separate the samples:
+```{r}
+plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
        geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
        geom_text(aes(label=Strain), size=1)
-print(p2)
-ggplotly(p2)
+
+ggplotly(plot)
 ```
+## Sample Extreams
+The above plot has a intersting shape, a triangle with 3 conditions strongly defining the corners:
+```{r}
+plot = ggplot(meta_pc %>% filter(Condition %in% c('YPD','Glucose Depletion', 'Rapamycin')), aes(x=PC1, y=PC2)) +
+       geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
+       geom_text(aes(label=Strain), size=1) +
+       scale_fill_discrete(drop = FALSE)
 
-We see that the first two principal components create a triangular scatter, with 3 conditions in the corners:
-
+ggplotly(plot)
+```
+The conditions that make up the vertices of the triangle are:
 * No Stress
 * Glucose Dropout
 * Rapamycin
 
-Lets look at these 3 conditions:
+These 3 are particularly intersting:
+* No Stress could be considered an origin
+* Rapamycin is the canonical activator of the TOR pathway
+* Glucose Depletion is the cononical activators of the PKA pathway
 
-```{r}
-  for(s in c('YPD', 'Glucose Depletion', 'Rapamycin')) {
-  plot = p1 +
-    geom_point(data = subset(meta_pc, Condition == s),
-                  aes(fill = Condition),
-                  shape = 21,
-                  size=4, stroke=1) +
-    geom_text(aes(label=Strain),
-              size=1) +
-    scale_fill_discrete(drop = FALSE) +
-    labs(title = s)  
-  print(plot)
-  }
+#Hypothesis
+## Statement
+One potential hypothesis is therefore:
 
-```
+1. The direction of the two vertices away from the control indicate the pathway activity for PKA and TOR.
+  + I will refer to these directions as the PKA and TOR __cardinal__ directions
+2. As far as PKA and TOR go, every stress I tested is some linear combination of PKA and TOR, which could be used to create a hierachy of stresses
 
-This is interesting, Not only are these conditions the most extream in terms of distance from No Stress, they are also considered the cononical activators of two major Kinases: PKA and TOR.
+## Possible Evidence
+If this hypothesis is true, I would expect the following:
+1. Within each individual condition, activation of PKA and TOR2 pathways should move the sample in their respective __cardinal__ direction. 
+2. If I project other stress datasets onto these prinicpal components, I should see a similar pattern.
+3. If I look at the gene loadings of these cardinal directions, I should extract genes associated with PKA and TOR.
 
-I therefore hypothesize that these directions in PC space represent the PKA, and TOR pathways.
-
-If this is true, I might expect that for each individual condition, the PKA and TOR2 strains would be offset from the group in the same direction as these pathways. lets check that out:
-
+# Results
+## Cardinality
 ```{r}
   for(s in levels(meta$Condition)) {
-  plot = p1 +
-    geom_point(data = subset(meta_pc, Condition == s),
-                  aes(fill = Condition,
-                      size = if_else(Strain %in% c('TPK123','TOR2'),4,2),
-                      color = if_else(Strain %in% c('TPK123','TOR2'),2,1)),
-                  shape = 21,
-                  stroke=1) +
-    geom_text(aes(label=Strain),
-              size=1) +
-    scale_fill_discrete(drop = FALSE) +
-    labs(title = s) +
-    guides(size=FALSE, color=FALSE) +
-    scale_size(range = c(3, 7))
+  plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
+         geom_point(data = subset(meta_pc, Condition == s),
+                    aes(fill = Condition,
+                    size = if_else(Strain %in% c('TPK123','TOR2'),4,2),
+                    color = if_else(Strain %in% c('TPK123','TOR2'),2,1)),
+                    shape = 21,
+                    stroke=1) +
+         geom_text(aes(label=Strain),
+                   size=1) +
+         scale_fill_discrete(drop = FALSE) +
+         labs(title = s) +
+         guides(size=FALSE, color=FALSE) +
+         scale_size(range = c(3, 7))
   print(plot)
   }
 
 ```
+<!-- If you want to use facet_wrap 
+```{r, fig.height=14, fig.width=7}
 
-
-One thing we definitely need to look at is how much of the variance is explained in the first two PCs? are we talking the whole thing? or just a part of it?
-
-```{r}
-plot(summary(pca)$importance[3,],
-     main='Percentage of Variance Explained',
-     xlab='PCs',
-     ylab='Cumulative Percentage of Variance Explained',
-     type='l')
-
-plot(summary(pca)$importance[3,1:5],
-     main='Percentage of Variance Explained',
-     xlab='PCs',
-     ylab='Cumulative Percentage of Variance Explained',
-     type='l',
-     ylim=c(0,1))
-
-barplot(summary(pca)$importance[2,1:10],
-     main='Percentage of Variance Explained',
-     xlab='PCs',
-     ylab='Percentage of Variance Explained',
-     ylim=c(0,1))
-```
-
-So we can see that the first two give big gains.
-
-```{r}
-100 * summary(pca)$importance[2,1:9]
-```
-
-PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7%
-
-
-# Looking at Gasch and Pronk Data
-## Gasch
-```{r}
-gasch = read.table('../../input/reference/gasch/pickGenes/imputed_gasch_data.txt', header=T, row.names = 1)
-gmeta = read.csv('../../input/meta/gasch_meta.csv')
-Stress_after = as.character(gmeta$Stress)
-Stress_after[gmeta$Time<10] = 'Pre-response'
-gmeta$Stress_after = factor(Stress_after)
-gx = gasch
-gx = gx - rowMeans(gx)
-# rv = genefilter::rowVars(gx)
-# select = order(rv, decreasing = TRUE)[seq_len(4000)]
-# gx = gx[select, ]
-colnames(gx) = gmeta$Sample_Name
-
-
-pca = prcomp(t(gx))
-gmeta_pc = cbind(as.data.frame(gmeta),
-                as.data.frame(
-                  pca$x[match(gmeta$Sample_Name,rownames(pca$x)),]
-                  ))
-
-p1 = ggplot(gmeta_pc, aes(x=PC1, y=PC2))
-p1 + geom_point(shape = 21, aes(fill = Stress_after), size=4, stroke=1) + geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), na.rm = FALSE, size=2)
-
-```
-
-Now lets also look at the PCs
-
-```{r}
-plot(summary(pca)$importance[3,],
-     main='Percentage of Variance Explained',
-     xlab='PCs',
-     ylab='Cumulative Percentage of Variance Explained',
-     type='l')
-
-plot(summary(pca)$importance[3,1:5],
-     main='Percentage of Variance Explained',
-     xlab='PCs',
-     ylab='Cumulative Percentage of Variance Explained',
-     type='l',
-     ylim=c(0,1))
-
-barplot(summary(pca)$importance[2,1:10],
-     main='Percentage of Variance Explained',
-     xlab='PCs',
-     ylab='Percentage of Variance Explained',
-     ylim=c(0,1))
-
-100 * summary(pca)$importance[2,1:9]
-
+  plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
+         geom_point(aes(fill = Condition,
+                    size = if_else(Strain %in% c('TPK123','TOR2'),4,2),
+                    color = if_else(Strain %in% c('TPK123','TOR2'),2,1)),
+                    shape = 21,
+                    stroke=1) +
+         geom_text(aes(label=Strain),
+                   size=1) +
+         scale_fill_discrete(drop = FALSE) +
+         guides(size=FALSE, color=FALSE) +
+         scale_size(range = c(3, 7)) +
+         facet_wrap(~Condition, scales = 'fixed', ncol = 2)
+  print(plot)
 
 
 ```
+-->
 
-## Pronk
+## Projection of other data
+### Gasch
+```{r}
+g_on_x = predict(pca,t(gx))
+gmeta_on_x = cbind(gmeta, g_on_x)
+
+plot = ggplot(gmeta_on_x, 
+              aes(x=PC1,
+                  y=PC2,
+                  label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)),
+                  fill = Stress_after)) + 
+       geom_point(shape = 21, size=4, stroke=1) +
+       geom_text(na.rm = FALSE, size=1.5)
+ggplotly(plot, tooltip = c("y", "x", "Time", 'fill'))
+# # This is to look at the PCs of the actual datset:
+# gpca = prcomp(t(gx))
+# gmeta_pc = cbind(as.data.frame(gmeta),
+#                 as.data.frame(
+#                   gpca$x[match(gmeta$Sample_Name,rownames(gpca$x)),]
+#                   ))
+# plot = ggplot(gmeta_pc, aes(x=PC1, y=PC2)) + geom_point(shape = 21, size=4, stroke=1)
+# print(plot)
+
+# # To include time:
+# plot = ggplot(gmeta_pc, aes(x=PC1, y=PC2)) +
+#        geom_point(shape = 21, 
+#                   aes(fill = Stress_after), 
+#                   size=4, 
+#                   stroke=1) + 
+#        geom_text(aes(label = ifelse(is.na(Time), "", sprintf("%1.0f",Time))), 
+#                  na.rm = FALSE, 
+#                  size=2)
+```
+### Pronk
 
 ```{r}
-library(Biobase)
-library(GEOquery)
-library(impute)
-library(ggplot2)
-source('../utils/0.2-data_manipulation_functions.R')
-gset <- getGEO("GSE11452", GSEMatrix =TRUE, getGPL=FALSE)
-if (length(gset) > 1) idx <- grep("GPL90", attr(gset, "names")) else idx <- 1
-gset <- gset[[idx]]
-pmeta = pData(gset)
-px = exprs(gset)
-p2t = read.table('../../input/reference/GPL_to_ORF.tsv', fill=T, header=T, stringsAsFactors=F)
-rownames(px) = p2t[,2]
-px = px[rownames(px) != '',]
-px = log2(px + 0.0001) # smallest nonzero is 2^-12
-#px = impute.knn(px)$data
-px = px - rowMeans(px)
-px = average_duplicate_genes(px)
+p_on_x = predict(pca,t(px))
+pmeta_on_x = cbind(pmeta, p_on_x)
 
-# rv = genefilter::rowVars(gx)
-# select = order(rv, decreasing = TRUE)[seq_len(4000)]
-# gx = gx[select, ]
-colnames(px) = pmeta$title
+plot = ggplot(pmeta_on_x, 
+              aes(x=PC1,
+                  y=PC2,
+                  fill = Condition)) + # TODO Add color when you have meta 
+       geom_point(shape = 21, size=4, stroke=1) #+
+       #geom_text(na.rm = FALSE, size=1.5)
+ggplotly(plot)#, tooltip = c("y", "x", "Time", 'fill'))
 
-
-ppca = prcomp(t(px))
-pmeta_pc = cbind(as.data.frame(pmeta),
-                as.data.frame(
-                  ppca$x[match(pmeta$title,rownames(ppca$x)),]
-                  ))
-
-p1 = ggplot(pmeta_pc, aes(x=PC1, y=PC2))
-p1 + geom_point(shape = 21, size=4, stroke=1)
+# # This is to look at the PCs of the actual datset:
+# ppca = prcomp(t(px))
+# pmeta_pc = cbind(as.data.frame(pmeta),
+#                 as.data.frame(
+#                   ppca$x[match(pmeta$title,rownames(ppca$x)),]
+#                   ))
+# plot = ggplot(pmeta_pc, aes(x=PC1, y=PC2)) + geom_point(shape = 21, size=4, stroke=1)
+# print(plot)
 ```
 
-```{r}
-gasch = read.table('../../input/reference/gasch_complete_dataset.txt', header=T, sep='\t', quote="", row.names=1, stringsAsFactors=F)
 
-g_info = gasch[,"NAME"]
-gmeta = read.csv('../../input/meta/gasch_meta.csv')
-Stress_after = as.character(gmeta$Stress)
-Stress_after[gmeta$Time<10] = 'Pre-response'
-gmeta$Stress_after = factor(Stress_after)
-
-gx = gasch[,-c(1,2)]
-gx = impute.knn(as.matrix(gx))$data
-gx = gx - rowMeans(gx)
-
-
-# rv = genefilter::rowVars(gx)
-# select = order(rv, decreasing = TRUE)[seq_len(4000)]
-# gx = gx[select, ]
-
-
-
-gpca = prcomp(t(gx))
-gmeta_pc = cbind(as.data.frame(gmeta),
-                as.data.frame(
-                  gpca$x[match(gmeta$Sample_Name,rownames(gpca$x)),]
-                  ))
-
-p1 = ggplot(gmeta_pc, aes(x=PC1, y=PC2))
-p1 + geom_point(shape = 21, size=4, stroke=1)
-```
 
 
 
@@ -306,35 +251,31 @@ ggplotly(p1, tooltip = c("y", "x", "Time", 'fill'))
 Can we compare the PCs of each dataset?
 
 ```{r}
-x = assay(vsd)
-gx = gasch
-px =
-x = x - rowMeans(x)
-gx = gx - rowMeans(gx)
-
-gx = gx[rownames(gx) %in% rownames(x),]
-x = x[rownames(gx),]
-
 pca = prcomp(t(x))
 gpca = prcomp(t(gx))
+ppca = prcomp(t(px))
 
-sim = cor(pca$rotation, gpca$rotation)
+gsim = cor(pca$rotation, gpca$rotation)
+psim = cor(pca$rotation, ppca$rotation)
 
-# Lets ask which PC in gasch is most similar to a PC in my data
-g_to_x_pc_mapping = colnames(sim)[apply(abs(sim),1,which.max)]
-# and lets also ask the opposite:
-x_to_g_pc_mapping = rownames(sim)[apply(abs(sim),2,which.max)]
-
-g_onx = predict(pca,t(gx))
-gmeta_on_x = cbind(gmeta, g_onx)
-
-p1 = ggplot(gmeta_on_x, aes(x=PC1,
-                         y=PC2,
-                         label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)),
-                         fill = Stress_after)) + geom_point(shape = 21, size=4, stroke=1) + geom_text(na.rm = FALSE, size=1.5)
-# You can click the circles to make them go away!
-ggplotly(p1, tooltip = c("y", "x", "Time", 'fill'))
-
+get_best_pc = function(source_pc, target_pc, num_target, num_best_source){
+  sim = cor(source_pc$rotation, target_pc$rotation)
+  abs_sim = abs(sim)
+  care = abs_sim[,1:num_target]
+  source_pc_names = rownames(care)
+  best = apply(care,2,function(x) source_pc_names[order(x,decreasing = T)[1:num_best_source]])
+  return(best)
+}
+#get_best_pc(pca,pca,10,5)
+```
+What are the best PCs from my data to match Gasch PCs?
+```{r}
+get_best_pc(pca,gpca,10,3)
+```
+What are the best PCs from my data to match Pronk PCs?
+```{r}
+get_best_pc(pca,ppca,10,3)
+```
 
 
 ```
