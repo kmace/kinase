@@ -14,18 +14,18 @@ list.of.cran.packages = c(
 'tidyr',
 'UpSetR',
 'viridis',
-'vsn'
+'vsn',
 'ggvis',
-'plotly',
-
-)
+'plotly')
 
 list.of.bioc.packages = c(
 'biomaRt',
 'DESeq2',
 'genefilter',
-'rhdf5'
-)
+'rhdf5',
+'impute',
+'Biobase',
+'GEOquery')
 
 new.packages <- list.of.cran.packages[!(list.of.cran.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
