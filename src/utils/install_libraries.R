@@ -14,7 +14,6 @@ list.of.cran.packages = c(
 'tidyr',
 'UpSetR',
 'viridis',
-'vsn',
 'ggvis',
 'plotly')
 
@@ -23,6 +22,7 @@ list.of.bioc.packages = c(
 'DESeq2',
 'genefilter',
 'rhdf5',
+'vsn',
 'impute',
 'Biobase',
 'GEOquery')
