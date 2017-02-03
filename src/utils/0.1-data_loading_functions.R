@@ -137,3 +137,45 @@ load_deseq_object = function(model, meta, gene_count_matrix) {
 		dds <- estimateSizeFactors(dds)
 		return(dds)
 }
+
+load_gasch = function() {
+  gasch = read.table('../../input/reference/gasch_complete_dataset.txt', header=T, sep='\t', quote="", row.names=1, stringsAsFactors=F)
+  #g_info = gasch[,"NAME"]
+  gmeta = read.csv('../../input/meta/gasch_meta.csv')
+  Stress_after = as.character(gmeta$Stress)
+  Stress_after[gmeta$Time<10] = 'Pre-response'
+  gmeta$Stress_after = factor(Stress_after)
+  
+  gx = gasch[,-c(1,2)]
+  gx = impute.knn(as.matrix(gx))$data
+  gx = gx - rowMeans(gx)
+  gasch = list()
+  gasch$data = gx
+  gasch$meta = gmeta
+  return(gasch)
+}
+
+load_pronk = function() {
+  gset <- getGEO("GSE11452", GSEMatrix =TRUE, getGPL=FALSE)
+  if (length(gset) > 1) idx <- grep("GPL90", attr(gset, "names")) else idx <- 1
+  gset <- gset[[idx]]
+  pmeta = pData(gset)
+  pmeta$Condition = as.factor(substr(as.character(pmeta$title), start=1, stop=30))
+  px = exprs(gset)
+  p2t = read.table('../../input/reference/GPL_to_ORF.tsv', fill=T, header=T, stringsAsFactors=F)
+  rownames(px) = p2t[,2]
+  px = px[rownames(px) != '',]
+  px = log2(px + 0.0001) # smallest nonzero is 2^-12
+  #px = impute.knn(px)$data
+  px = px - rowMeans(px)
+  px = average_duplicate_genes(px)
+  
+  # rv = genefilter::rowVars(gx)
+  # select = order(rv, decreasing = TRUE)[seq_len(4000)]
+  # gx = gx[select, ]
+  colnames(px) = pmeta$title
+  pronk = list()
+  pronk$data = px
+  pronk$meta = pmeta
+  return(pronk)
+}
