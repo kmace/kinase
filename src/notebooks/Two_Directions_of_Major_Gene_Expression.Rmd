@@ -18,7 +18,8 @@ source('../utils/load_data.R')
 We will be condsidering the samples that have been inhibited:
 ```{r}
 # Filter
-#vsd = vsd[,colData(vsd)$Drug == 'Cocktail']
+vsd_no_drug = vsd[,colData(vsd)$Drug == 'None']
+vsd = vsd[,colData(vsd)$Drug == 'Cocktail']
 meta = colData(vsd)
 meta = as.data.frame(meta)
 meta = meta %>% mutate(Condition = if_else(Stress=='None',
