@@ -155,6 +155,34 @@ load_gasch = function() {
   return(gasch)
 }
 
+load_megaYeast = function() {
+  mega = read.table('../../input/reference/Mega_YeastX.txt', 
+                     header=T, 
+                     sep='\t', 
+                     quote="", 
+                     comment.char = '',
+                     row.names=1, 
+                     stringsAsFactors=F)
+  #g_info = gasch[,"NAME"]
+  #mmeta = read.csv('../../input/meta/gasch_meta.csv')
+  #Stress_after = as.character(gmeta$Stress)
+  #Stress_after[gmeta$Time<10] = 'Pre-response'
+  #gmeta$Stress_after = factor(Stress_after)
+  
+  mx = mega[,-1]
+  num_missing_genes = apply(mx,2,function(x) sum(is.na(x)))
+  mx = mx[,num_missing_genes<3000]
+  num_missing_genes = apply(mx,1,function(x) sum(is.na(x)))
+  mx = mx[num_missing_genes<400, ]
+
+  mx = impute.knn(as.matrix(mx))$data
+  mx = mx - rowMeans(mx)
+  mega = list()
+  mega$data = mx
+  #mega$meta = mmeta
+  return(mega)
+}
+
 load_pronk = function() {
   gset <- getGEO("GSE11452", GSEMatrix =TRUE, getGPL=FALSE)
   if (length(gset) > 1) idx <- grep("GPL90", attr(gset, "names")) else idx <- 1
