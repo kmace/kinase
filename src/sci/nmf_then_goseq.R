@@ -24,7 +24,6 @@ get_go_terms_from_list = function(query_list, background_list) {
     genes[query_list] = 1
     pwf = nullp(genes,"sacCer2","ensGene")
     GO.wall=goseq(pwf,gene2cat=as.list(org.Sc.sgdGO2ALLORFS))
-
     return(GO.wall)
 }
 

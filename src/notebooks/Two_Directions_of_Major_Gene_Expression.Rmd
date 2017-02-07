@@ -18,6 +18,7 @@ source('../utils/load_data.R')
 We will be condsidering the samples that have been inhibited:
 ```{r}
 # Filter
+vsd_no_drug = vsd[,colData(vsd)$Drug == 'None']
 vsd = vsd[,colData(vsd)$Drug == 'Cocktail']
 meta = colData(vsd)
 meta = as.data.frame(meta)
@@ -38,14 +39,19 @@ pronk = load_pronk()
 px = pronk$data
 pmeta = pronk$meta
 
+mega = load_megaYeast()
+mx = mega$data
+
 common_genes = Reduce(intersect, 
                       list(rownames(gx), 
                            rownames(x), 
-                           rownames(px)))
+                           rownames(px),
+                           rownames(mx)))
 
 x = x[common_genes, ]
 gx = gx[common_genes, ]
 px = px[common_genes, ]
+mx = mx[common_genes, ]
 ```
 # Overview
 ##Prinicipal Component Decomposition
@@ -69,8 +75,8 @@ PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7% of the vari
 
 Let's now look at how the first two Principal Component separate the samples:
 ```{r}
-plot = ggplot(meta_pc, aes(x=PC3, y=PC2)) +
-       geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
+plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
+       geom_point(shape = 21, aes(fill = Condition, color=Drug), size=4, stroke=1) +
        geom_text(aes(label=Strain), size=1)
 
 ggplotly(plot)
@@ -210,6 +216,29 @@ ggplotly(plot)#, tooltip = c("y", "x", "Time", 'fill'))
 
 
 
+```{r}
+m_on_x = predict(pca,t(mx))
+#pmeta_on_x = cbind(pmeta, p_on_x)
+
+plot = ggplot(data.frame(m_on_x), 
+              aes(x=PC1,
+                  y=PC2)) + # TODO Add color when you have meta 
+       geom_point(shape = 21, size=4, stroke=1) #+
+       #geom_text(na.rm = FALSE, size=1.5)
+ggplotly(plot)#, tooltip = c("y", "x", "Time", 'fill'))
+
+# # This is to look at the PCs of the actual datset:
+# ppca = prcomp(t(px))
+# pmeta_pc = cbind(as.data.frame(pmeta),
+#                 as.data.frame(
+#                   ppca$x[match(pmeta$title,rownames(ppca$x)),]
+#                   ))
+# plot = ggplot(pmeta_pc, aes(x=PC1, y=PC2)) + geom_point(shape = 21, size=4, stroke=1)
+# print(plot)
+```
+
+
+
 
 
 
@@ -219,9 +248,11 @@ Can we compare the PCs of each dataset?
 pca = prcomp(t(x))
 gpca = prcomp(t(gx))
 ppca = prcomp(t(px))
+mpca = prcomp(t(mx))
 
 gsim = cor(pca$rotation, gpca$rotation)
 psim = cor(pca$rotation, ppca$rotation)
+msim = cor(pca$rotation, mpca$rotation)
 
 get_best_pc = function(source_pc, target_pc, num_target, num_best_source){
   sim = cor(source_pc$rotation, target_pc$rotation)
@@ -241,5 +272,61 @@ What are the best PCs from my data to match Pronk PCs?
 ```{r}
 get_best_pc(pca,ppca,10,3)
 ```
+What are the best PCs from my data to match Mega PCs?
+```{r}
+get_best_pc(pca,mpca,10,3)
+```
 
+Two major questions I want to answer are:
+
+What are each PC indiciating? lets make a way to extract go terms for each PC.
+
+For a given stress, which strain is an outlier in PC space
+
+What is the cardinality for each strain across all stresses? does inactivaton of a particualr stress always point in the same direction in PC space? and if so, what direction does it point in? are there go terms associated with that direction?
+
+PBS2 seems really intersting. it seems to shut down the glucose dropout response. which itself is a very strong response. what genes is it shutting down? the entire program? or part of it (such as msn2 targets or tod6 targets etc. )
+
+Lets describe the PCs using go terms.
+
+```{r, results='asis', message=F}
+get_go_terms_from_list = function(query_list, background_list) {
+    library(goseq)
+    library(org.Sc.sgd.db)
+    genes = numeric(length(background_list))
+    names(genes) = background_list
+    genes[query_list] = 1
+    pwf = nullp(genes,"sacCer2","ensGene")
+    GO.wall=goseq(pwf,gene2cat=as.list(org.Sc.sgdGO2ALLORFS))
+    return(GO.wall)
+}
+
+print_out_terms = function(g_dir){
+  library(knitr)
+  g_dir %>%
+    dplyr::mutate(pval = min(over_represented_pvalue, under_represented_pvalue),
+                  percent_in = numDEInCat / numInCat) %>%
+    dplyr::arrange(pval) %>%
+    dplyr::filter(pval<0.01) %>% 
+    dplyr::select(term, pval, percent_in) %>% head() %>% kable(format = "markdown")
+}
+
+do_pc = function(str, pc){
+pc = pca$rotation[,str]
+
+pc_up = names(pc)[(pc - mean(pc))/sd(pc) > 2]
+g_up = get_go_terms_from_list(pc_up, names(pc))
+print_out_terms(g_up)
+
+pc_down = names(pc)[(pc - mean(pc))/sd(pc)< -2]
+g_down = get_go_terms_from_list(pc_down, names(pc))
+print_out_terms(g_down)
+}
+
+do_pc('PC1', pca)
+do_pc('PC2', pca)
+do_pc('PC3', pca)
+do_pc('PC4', pca)
+
+```
 
