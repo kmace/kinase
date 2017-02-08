@@ -76,10 +76,26 @@ PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7% of the vari
 Let's now look at how the first two Principal Component separate the samples:
 ```{r}
 plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
-       geom_point(shape = 21, aes(fill = Condition, color=Drug), size=4, stroke=1) +
+       geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
        geom_text(aes(label=Strain), size=1)
 
 ggplotly(plot)
+
+cols = ggplot_build(plot)$data
+cols = cols[[1]]
+cols = unique(cols[order(cols$group),]$fill)
+```
+
+```{r}
+library(plotly)
+
+p <- plot_ly(meta_pc, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Condition,
+             colors = cols) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = 'PC1'),
+                      yaxis = list(title = 'PC2'),
+                      zaxis = list(title = 'PC3')))
+p
 ```
 ## Sample Extreams
 The above plot has a intersting shape, a triangle with 3 conditions strongly defining the corners:
@@ -329,4 +345,3 @@ do_pc('PC3', pca)
 do_pc('PC4', pca)
 
 ```
-
