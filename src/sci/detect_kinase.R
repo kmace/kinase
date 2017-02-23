@@ -9,7 +9,6 @@ get_extream_kinase = function(data, strain_code, num_top, get_highest_kinase=TRU
   return(rank_df)
 }
 
-
 make_plot = function(data, meta, title){
   data = data[order(rowMeans(data)), ]
    top = get_extream_kinase(data, 
@@ -58,22 +57,31 @@ for(c in unique(meta$Condition)){
 
 # Example of Tunicamycin Plot
 x = assay(vsd)
+x = rename_gene_names(x,t2g)
 x = x - rowMeans(x) # Can we do this in a better way?
-colnames(x) = meta$Sample_Name
-t = vsd[,colData(vsd)$Stress == 'Tunicamycin']
-tx = assay(t)
-tm = colData(t)
-rm = rowMedians(tx[,tm$Strain=='WT'])
-dec = order(rm, decreasing = T)
-tx = tx[dec,] # Can we also subset these so that we only keep genes that are actually on? what about DE?
-rm = rm[dec]
-colnames(tx) = tm$Strain_Code
 
-sd = apply(msm,1,sd)
 
-sigma = apply(tx,2,function(x) (x-rm)/sd)
-sigma = rename_gene_names(sigma,t2g = t2g)
+for(c in unique(meta$Condition)){
+stress_specific = vsd[,meta$Condition == c]
+stress_x = assay(stress_specific)
+stress_x = rename_gene_names(stress_x,t2g)
+stress_meta = colData(stress_specific)
+colnames(stress_x) = stress_meta$Strain_Code
+stress_wt = rowMedians(stress_x[,stress_meta$Strain=='WT'])
+stress_ave = rowMeans(stress_x)
+sd = apply(stress_x,1,sd)
+# your pick here
+sigma = apply(stress_x,2,function(x) (x-stress_wt)/sd)
 sigma[sigma < 1 & sigma > -1] = 0
+cond_de = (stress_ave - median(stress_wt))/sd(stress_wt)
+#install.packages("d3heatmap")
+d3heatmap(sigma[names(which(cond_de>2)),])
+}
+
+
+
+
+
 
 pheatmap(sigma[1:30,]) # again, lets have this be subset, not some dumb number
 pheatmap(sigma[1:300,])
