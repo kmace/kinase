@@ -76,21 +76,33 @@ PC1 with 35%, PC2 with 20%, and the next PCs - 3 & 4 are down to ~7% of the vari
 Let's now look at how the first two Principal Component separate the samples:
 ```{r}
 plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
-       geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
+       geom_point(shape = 21, aes(text = Strain, fill = Condition), size=4, stroke=1) +
        geom_text(aes(label=Strain), size=1)
 
-ggplotly(plot)
+ggplotly(plot, tooltip = c("text", "fill"))
 
-cols = ggplot_build(plot)$data
-cols = cols[[1]]
-cols = unique(cols[order(cols$group),]$fill)
+plot = ggplot(meta_pc, aes(x=PC1, y=PC3)) +
+       geom_point(shape = 21, aes(text = Strain, fill = Condition), size=4, stroke=1) +
+       geom_text(aes(label=Strain), size=1)
+
+ggplotly(plot, tooltip = c("text", "fill"))
+
+plot = ggplot(meta_pc, aes(x=PC2, y=PC3)) +
+       geom_point(shape = 21, aes(text = Strain, fill = Condition), size=4, stroke=1) +
+       geom_text(aes(label=Strain), size=1)
+
+ggplotly(plot, tooltip = c("text", "fill"))
 ```
 
 ```{r}
 library(plotly)
 
+cols = ggplot_build(plot)$data
+cols = cols[[1]]
+cols = unique(cols[order(cols$group),]$fill)
+
 p <- plot_ly(meta_pc, x = ~PC1, y = ~PC2, z = ~PC3, color = ~Condition,
-             colors = cols) %>%
+             colors = cols, text=meta_pc$Strain_Code) %>%
   add_markers() %>%
   layout(scene = list(xaxis = list(title = 'PC1'),
                       yaxis = list(title = 'PC2'),
@@ -100,12 +112,12 @@ p
 ## Sample Extreams
 The above plot has a intersting shape, a triangle with 3 conditions strongly defining the corners:
 ```{r}
-plot = ggplot(meta_pc %>% filter(Condition %in% c('YPD','Glucose Depletion', 'Rapamycin')), aes(x=PC3, y=PC2)) +
-       geom_point(shape = 21, aes(fill = Condition), size=4, stroke=1) +
+plot = ggplot(meta_pc %>% filter(Condition %in% c('YPD','Glucose Depletion', 'Rapamycin')), aes(x=PC1, y=PC2)) +
+       geom_point(shape = 21, aes(text = Strain, fill = Condition), size=4, stroke=1) +
        geom_text(aes(label=Strain), size=1) +
        scale_fill_discrete(drop = FALSE)
 
-ggplotly(plot)
+ggplotly(plot, tooltip = c("text", "fill"))
 ```
 The conditions that make up the vertices of the triangle are:
 * No Stress
@@ -150,6 +162,22 @@ If this hypothesis is true, I would expect the following:
          scale_size(range = c(3, 7))
   print(plot)
   }
+
+  plot = ggplot(meta_pc, aes(x=PC1, y=PC2)) +
+         geom_point(
+                    aes(fill = Condition,
+                    size = if_else(Strain %in% c('TPK123','TOR2','PBS2'),4,2),
+                    color = if_else(Strain %in% c('TPK123','TOR2','PBS2'),2,1)),
+                    shape = 21,
+                    stroke=1) +
+         geom_text(aes(label=Strain),
+                   size=1) +
+         facet_wrap(~Condition) +
+         scale_fill_discrete(drop = FALSE) +
+         labs(title = s) +
+         guides(size=FALSE, color=FALSE) +
+         scale_size(range = c(3, 7))
+  print(plot)
 
 ```
 <!-- If you want to use facet_wrap 
@@ -327,21 +355,46 @@ print_out_terms = function(g_dir){
     dplyr::select(term, pval, percent_in) %>% head() %>% kable(format = "markdown")
 }
 
-do_pc = function(str, pc){
+do_pc = function(str, pca){
 pc = pca$rotation[,str]
-
+g = list()
 pc_up = names(pc)[(pc - mean(pc))/sd(pc) > 2]
 g_up = get_go_terms_from_list(pc_up, names(pc))
-print_out_terms(g_up)
+#print_out_terms(g_up)
+g$up = g_up
 
 pc_down = names(pc)[(pc - mean(pc))/sd(pc)< -2]
 g_down = get_go_terms_from_list(pc_down, names(pc))
-print_out_terms(g_down)
+#print_out_terms(g_down)
+g$down = g_down
+
+return(g)
 }
 
-do_pc('PC1', pca)
-do_pc('PC2', pca)
-do_pc('PC3', pca)
-do_pc('PC4', pca)
+g1 = do_pc('PC1', pca)
+g2 = do_pc('PC2', pca)
+g3 = do_pc('PC3', pca)
+g4 = do_pc('PC4', pca)
 
+```
+
+####PC1
+```{r, results='asis'}
+print_out_terms(g1$up)
+print_out_terms(g1$down)
+```
+####PC2
+```{r, results='asis'}
+print_out_terms(g2$up)
+print_out_terms(g2$down)
+```
+####PC3
+```{r, results='asis'}
+print_out_terms(g3$up)
+print_out_terms(g3$down)
+```
+####PC4
+```{r, results='asis'}
+print_out_terms(g4$up)
+print_out_terms(g4$down)
 ```
