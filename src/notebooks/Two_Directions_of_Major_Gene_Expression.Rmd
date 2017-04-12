@@ -1,9 +1,9 @@
 ---
 title: "Global Analysis of Kinase Drivers of the Yeast Stress Response"
 output:
-  html_document: default
-  html_notebook: default
   pdf_document: default
+  html_notebook: default
+  html_document: default
 ---
 
 ```{r,message=FALSE, echo=FALSE}
