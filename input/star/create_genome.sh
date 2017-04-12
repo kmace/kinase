@@ -1,0 +1,2 @@
+#!/bin/bash
+STAR --runThreadN 12 --runMode genomeGenerate --genomeDir genomeDir --genomeFastaFiles genomeFasta/chrI.fa genomeFasta/chrII.fa genomeFasta/chrIII.fa genomeFasta/chrIV.fa genomeFasta/chrIX.fa genomeFasta/chrM.fa genomeFasta/chrV.fa genomeFasta/chrVI.fa genomeFasta/chrVII.fa genomeFasta/chrVIII.fa genomeFasta/chrX.fa genomeFasta/chrXI.fa genomeFasta/chrXII.fa genomeFasta/chrXIII.fa genomeFasta/chrXIV.fa genomeFasta/chrXV.fa genomeFasta/chrXVI.fa --sjdbGTFfile sac_cer_ucsc.gtf --sjdbOverhang 39
