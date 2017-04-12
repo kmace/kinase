@@ -1,11 +1,64 @@
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 meta = read.csv('../../input/meta/Salt_plate_meta.csv',header=T)
 od = read.csv('../../input/growth/salt.csv', header=T)
-od = od[,-c(1,2,3)]
-rate = 3*apply(log2(apply(od,2,smooth)),2,diff)
-meta = meta %>% mutate(well_name = paste(Row, Column,sep=''))
-meta = meta %>% filter(Column!=3 & Column!=5) # Messed up these wells
+colnames(od)[1:3] = c("Cycle", 'Time', 'Temp')
+
+
+rate = 3*apply(log2(apply(od[,-c(1,2,3)],2,smooth)),2,diff)
+rate = rbind(rate, rep(NA, dim(rate)[2]))
+rate = cbind(od[,1:3], rate)
+meta = meta %>% mutate(Well = paste(Row, Column,sep=''))
+meta$Repeat = factor(meta$Repeat)
 timestep = 20 # min
 #od = od[1:45,]
+
+od = od %>% gather(Well, OD, -Temp, -Time, -Cycle)
+rate = rate %>% gather(Well, Growth_Rate, -Temp, -Time, -Cycle)
+all = left_join(od, rate)
+all = left_join(all, meta)
+
+all = all %>% filter(Column!=3 & Column!=5) # Messed up these wells
+
+
+all %>% na.omit() %>% ggplot(aes(x = Time, y = OD, color=Condition, shape=Repeat)) + geom_point() + geom_line() + facet_wrap(~Strain)
+
+all %>% na.omit() %>% ggplot(aes(x = Time, y = Growth_Rate, color=Condition, shape=Repeat)) + geom_point() + geom_line() + facet_wrap(~Strain)
+
+p = all %>% group_by(Strain, Condition, Time) %>% summarise(OD = mean(OD)) %>%ggplot(aes(x = Time, y = OD, color = Condition)) + geom_line() + facet_wrap(~Strain)
+p
+ggsave('salt_growth_od.pdf')
+
+fastest_wt = all %>%
+             filter(grepl("WT", Strain)) %>%
+             group_by(Condition, Cycle) %>%
+             summarize(rate = mean(Growth_Rate)) %>%
+             ungroup() %>%
+             group_by(Condition) %>%
+             slice(which.max(rate))
+
+only_best = semi_join(all, fastest_wt)
+
+only_best %>%
+group_by(Strain, Condition) %>%
+summarise(OD = mean(OD),
+          Growth_Rate = mean(Growth_Rate)) %>%
+ungroup() %>%
+ggplot(aes(x=Condition, y = Growth_Rate)) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~Strain) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+only_best %>%
+group_by(Strain, Condition) %>%
+summarise(Growth_Rate = mean(Growth_Rate)) %>%
+ungroup() %>% group_by(Strain) %>%
+mutate(GRN = Growth_Rate / Growth_Rate[Condition=='Salt']) %>%
+ggplot(aes(x = Condition, y = (GRN))) + geom_bar(stat='identity') +
+facet_wrap(~Strain) +
+theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 # Calculate Parameters:
 # Fastest Growth Rate
