@@ -32,6 +32,7 @@ load_seq_meta_data = function() {
 	meta = meta %>%
 		mutate(tophat_path = file.path('../../input/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
 					 star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')),
+					 star_column = if_else(Adaptor=="TruSeq-RNA",3,2),
 					 kallisto_path = file.path('../../input/kallisto/kallisto_output', paste(SampleName,'_sequence.txt.gz',sep='')) ) %>%
 		rename(sample = SampleName)
 		return(meta)
@@ -56,12 +57,15 @@ load_transcripts_to_genes = function() {
 		return(t2g)
 }
 
-load_count_file = function(path, type = 'tophat') {
+load_count_file = function(path, type = 'tophat', star_col=NA) {
 		counts_table = read.table(path, row.names=1)
 		d = dim(counts_table)
 		if(type == 'star') {
+		    if(is.na(star_col)){
+		      stop("if you want to load reads from star, you need to indicate what column to use")
+		    }
 				num_non_genes = 4
-				counts_table = counts_table[-c(1:num_non_genes), 3,drop=F]
+				counts_table = counts_table[-c(1:num_non_genes), star_col, drop=F]
 				# non_gene_location = 'begining'
 		} else if(type == 'tophat') {
 				num_non_genes = 5
@@ -76,9 +80,11 @@ load_count_file = function(path, type = 'tophat') {
 load_count_matrix = function(meta, type = 'tophat'){
 		# The meta file must contain at least the seq meta data.
 		paths = switch(type, tophat = meta$tophat_path, star = meta$star_path)
+		col = switch(type, tophat = NA, star = meta$star_column)
 		count_matrix <- do.call("cbind",
-										lapply(paths,
-													 function(p) load_count_file(p, type)))
+										mapply(function(p, c) load_count_file(p, type, c),
+										       paths,
+										       col))
 		colnames(count_matrix) = meta$Sample_Name
 		return(count_matrix)
 }

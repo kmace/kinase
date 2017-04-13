@@ -59,6 +59,7 @@ To drive this point home, I will also look at data that I have for two other con
 ```{r scatter_2, fig.width=11, fig.height=11, cache=TRUE}
 check_stress('Azetidine')
 check_stress('Heatshock')
+check_stress('Glucose Depletion')
 ```
 One consideration here, is that there is no baseline in these plots, I am simply plotting the raw values.
 
