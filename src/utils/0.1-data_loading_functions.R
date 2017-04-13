@@ -84,7 +84,7 @@ load_count_matrix = function(meta, type = 'tophat'){
 		count_matrix <- do.call("cbind",
 										mapply(function(p, c) load_count_file(p, type, c),
 										       paths,
-										       col))
+										       col, SIMPLIFY = FALSE))
 		colnames(count_matrix) = meta$Sample_Name
 		return(count_matrix)
 }
