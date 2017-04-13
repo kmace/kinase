@@ -61,7 +61,7 @@ load_count_file = function(path, type = 'tophat') {
 		d = dim(counts_table)
 		if(type == 'star') {
 				num_non_genes = 4
-				counts_table = counts_table[-c(1:num_non_genes), 1,drop=F]
+				counts_table = counts_table[-c(1:num_non_genes), 3,drop=F]
 				# non_gene_location = 'begining'
 		} else if(type == 'tophat') {
 				num_non_genes = 5
@@ -145,7 +145,7 @@ load_gasch = function() {
   Stress_after = as.character(gmeta$Stress)
   Stress_after[gmeta$Time<10] = 'Pre-response'
   gmeta$Stress_after = factor(Stress_after)
-  
+
   gx = gasch[,-c(1,2)]
   gx = impute.knn(as.matrix(gx))$data
   gx = gx - rowMeans(gx)
@@ -156,19 +156,19 @@ load_gasch = function() {
 }
 
 load_megaYeast = function() {
-  mega = read.table('../../input/reference/Mega_YeastX.txt', 
-                     header=T, 
-                     sep='\t', 
-                     quote="", 
+  mega = read.table('../../input/reference/Mega_YeastX.txt',
+                     header=T,
+                     sep='\t',
+                     quote="",
                      comment.char = '',
-                     row.names=1, 
+                     row.names=1,
                      stringsAsFactors=F)
   #g_info = gasch[,"NAME"]
   #mmeta = read.csv('../../input/meta/gasch_meta.csv')
   #Stress_after = as.character(gmeta$Stress)
   #Stress_after[gmeta$Time<10] = 'Pre-response'
   #gmeta$Stress_after = factor(Stress_after)
-  
+
   mx = mega[,-1]
   num_missing_genes = apply(mx,2,function(x) sum(is.na(x)))
   mx = mx[,num_missing_genes<3000]
@@ -197,7 +197,7 @@ load_pronk = function() {
   #px = impute.knn(px)$data
   px = px - rowMeans(px)
   px = average_duplicate_genes(px)
-  
+
   # rv = genefilter::rowVars(gx)
   # select = order(rv, decreasing = TRUE)[seq_len(4000)]
   # gx = gx[select, ]
