@@ -200,7 +200,7 @@ load_pronk = function() {
   rownames(px) = p2t[,2]
   px = px[rownames(px) != '',]
   px = log2(px + 0.0001) # smallest nonzero is 2^-12
-  #px = impute.knn(px)$data
+  px = impute.knn(px)$data
   px = px - rowMeans(px)
   px = average_duplicate_genes(px)
 
