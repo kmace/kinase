@@ -11,9 +11,23 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 source('../utils/load_libraries.R')
 source('../utils/load_functions.R')
 source('../utils/load_data.R')
+```
+
+```{r}
+
+
+dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, design = ~ Strain + Stress)
+dds = DESeq(dds, test="LRT", reduced=~ Stress)
+res = results(dds)
+res
+summary(res)
 
 
 ```
+
+
+
+
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
 
