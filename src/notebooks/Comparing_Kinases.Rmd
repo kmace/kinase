@@ -90,8 +90,23 @@ interactive_heatmap("m")
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r, echo=FALSE}
+meta = master_meta %>% filter(Plate_Code==plate_code)
+raw_counts = load_count_matrix(meta,'star')
+dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~Strain)
+dds = DESeq(dds)
+rld = rlog(dds, blind=FALSE)
+library(genefilter)
+topVarGenes <- head(order(rowVars(assay(rld)),decreasing=TRUE),200)
+mat <- assay(rld)#[ topVarGenes, ]
+mat <- mat - rowMeans(mat)
+mat = rename_gene_names(mat,t2g)
+colnames(mat) = meta$Strain_Code
+#df <- as.data.frame(colData(rld)[,c("Strain")])
+#pheatmap(mat, annotation_col=df)
+mat[mat > 2] = 2
+mat[mat < -2] = -2
+d3heatmap(mat, colors = "RdBu")
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
