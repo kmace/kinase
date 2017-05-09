@@ -48,11 +48,14 @@ get_sample_meta = function() {
 load_transcripts_to_genes = function() {
 		mart <- biomaRt::useMart(biomart = "ensembl", dataset = "scerevisiae_gene_ensembl")
 		t2g <- biomaRt::getBM(attributes = c("ensembl_transcript_id",
-																				 "ensembl_gene_id",
-																				 "external_gene_name"), mart = mart)
+											 "ensembl_gene_id",
+											 "external_gene_name",
+											 "description"), mart = mart)
 
-		t2g <- dplyr::rename(t2g, target_id = ensembl_transcript_id,
-			ens_gene = ensembl_gene_id, ext_gene = external_gene_name)
+		t2g <- dplyr::rename(t2g,
+			target_id = ensembl_transcript_id,
+			ens_gene = ensembl_gene_id,
+			ext_gene = external_gene_name)
 		t2g <- t2g %>% dplyr::mutate(name=ifelse(ext_gene=='',ens_gene,ext_gene))
 		return(t2g)
 }
