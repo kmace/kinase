@@ -1,3 +1,18 @@
+library(DESeq2)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+library(RGraphics)
+
+
+load('../../input/images/normalized_data.RData')
+source('../utils/0.1-data_loading_functions.R')
+# If you want to look at all the data, then comment this out:
+vsd = vsd[, colData(vsd)$Drug == 'Cocktail']
+
+t2g = load_transcripts_to_genes()
+
 colnames(vsd) = paste(vsd$Condition, vsd$Strain_Code, sep = "_")
 out = assay(vsd)
 out = as.data.frame(out)
@@ -33,7 +48,10 @@ all = all %>% group_by(Name, Condition) %>%
                                                NA)) %>%
                 ungroup()
 
-make_plot = function(gene) {
+reporters = read.table('../../input/reference/pathway_reporters.csv', sep='\t', header =T)
+reporters$Gene = as.character(reporters$Gene)
+
+make_plot = function(gene, pathway) {
 dat = all %>% filter(Name == gene)
 p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
             geom_tile(aes(fill=Expression)) +
@@ -50,7 +68,7 @@ p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
                theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
-text = paste0(gene, ": ", t2g[t2g$name == gene, "description"])
+text = paste0(gene, " (", pathway, "): ", t2g[t2g$name == gene, "description"])
 p_desc = ggplot() +
  annotate("text", x = 4, y = 25, size=8, label = text)
 grid.arrange(p_heatmap + theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
@@ -59,9 +77,11 @@ grid.arrange(p_heatmap + theme(legend.position="none", axis.text.x=element_blank
           textGrob(do.call(paste, c(as.list(strwrap(text)), sep="\n"))), nrow=2, ncol=2)
 }
 
-gene = 'HSP12'
-
-make_plot(gene)
+pdf('reporter_genes.pdf', width=14, height=8)
+for (i in 1:dim(reporters)[1]) {
+    make_plot(reporters[i,2], reporters[i,1])
+}
+dev.off()
 
 pdf('single_gene.pdf')
 lapply(t2g$name, make_plot)
