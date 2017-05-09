@@ -1,9 +1,9 @@
 ---
 title: "Global Analysis of Kinase Drivers of the Yeast Stress Response"
 output:
-  pdf_document: default
-  html_notebook: default
   html_document: default
+  html_notebook: default
+  pdf_document: default
 ---
 
 ```{r,message=FALSE, echo=FALSE}
@@ -31,6 +31,7 @@ x = assay(vsd)
 x = x - rowMeans(x)
 colnames(x) = meta$Sample_Name
 
+
 gasch = load_gasch()
 gx = gasch$data
 gmeta = gasch$meta
@@ -41,6 +42,7 @@ pmeta = pronk$meta
 
 mega = load_megaYeast()
 mx = mega$data
+mmeta = mega$meta
 
 common_genes = Reduce(intersect, 
                       list(rownames(gx), 
@@ -208,7 +210,7 @@ g_on_x = predict(pca,t(gx))
 gmeta_on_x = cbind(gmeta, g_on_x)
 
 plot = ggplot(gmeta_on_x, 
-              aes(x=PC3,
+              aes(x=PC1,
                   y=PC2,
                   label = ifelse(is.na(Time), "", sprintf("%1.0f",Time)),
                   fill = Stress_after)) + 
