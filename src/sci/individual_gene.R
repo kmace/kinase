@@ -59,25 +59,26 @@ p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
 
 p_cond_box = ggplot(dat, aes(x = Condition, y = Expression)) +
              geom_boxplot() +
-             geom_text(aes(label = condition_outlier), size=2, na.rm = TRUE, hjust = -0.3) +
+             geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE, hjust = -0.3) +
              coord_flip()
 
 p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
                geom_boxplot() +
-               geom_text(aes(label = strain_outlier), size=2, na.rm = TRUE, hjust = -0.3) +
+               geom_text_repel(aes(label = strain_outlier), size=2, na.rm = TRUE, hjust = -0.3) +
                theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
 text = paste0(gene, " (", pathway, "): ", t2g[t2g$name == gene, "description"])
 p_desc = ggplot() +
  annotate("text", x = 4, y = 25, size=8, label = text)
+
 grid.arrange(p_heatmap + theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
           p_cond_box,
           p_strain_box + theme(legend.position="none", axis.text.y=element_blank()),
           textGrob(do.call(paste, c(as.list(strwrap(text)), sep="\n"))), nrow=2, ncol=2)
 }
 
-pdf('reporter_genes.pdf', width=14, height=8)
+pdf('../../output/reporter_genes.pdf', width=14, height=8)
 for (i in 1:dim(reporters)[1]) {
     make_plot(reporters[i,2], reporters[i,1])
 }
