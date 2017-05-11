@@ -4,6 +4,7 @@ library(ggplot2)
 library(tidyr)
 library(gridExtra)
 library(RGraphics)
+library(ggrepel)
 
 
 load('../../input/images/normalized_data.RData')
@@ -59,12 +60,12 @@ p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
 
 p_cond_box = ggplot(dat, aes(x = Condition, y = Expression)) +
              geom_boxplot() +
-             geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE, hjust = -0.3) +
+             geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE) +
              coord_flip()
 
 p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
                geom_boxplot() +
-               geom_text_repel(aes(label = strain_outlier), size=2, na.rm = TRUE, hjust = -0.3) +
+               geom_text_repel(aes(label = strain_outlier), size=2, na.rm = TRUE) +
                theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
@@ -82,8 +83,4 @@ pdf('../../output/reporter_genes.pdf', width=14, height=8)
 for (i in 1:dim(reporters)[1]) {
     make_plot(reporters[i,2], reporters[i,1])
 }
-dev.off()
-
-pdf('single_gene.pdf')
-lapply(t2g$name, make_plot)
 dev.off()
