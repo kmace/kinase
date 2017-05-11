@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+One question we want to know is: what genes are differentially expressed between our kinase strains and the WT strains regardless of condition. for a given kinase, there will be 3 classes of genes. 
+
+1. Those whos levels do not differ from WT ever
+2. Those whos levels differ from WT only in certain conditions
+3. Those whos levels differ from WT in all conditions
+
+Differentating from class 1 and class 3 seems to be doable. class 2 genes may be classified as class 1 genes if the number of conditions are small (statistcally seen as an outlier), but will be classified as class 3 if the number of conditions that have differential expression with respect to WT.
+
+```{r, message=FALSE}
+source('../utils/load_libraries.R')
+source('../utils/load_data.R')
+source('../utils/load_functions.R')
+```
+
+```{r}
+
+
+drug_counts = raw_counts[,meta$Drug == 'Cocktail']
+drug_meta = meta[meta$Drug == 'Cocktail', ]
+#dds = DESeqDataSetFromMatrix(countData = drug_counts, colData = drug_meta, design = ~ Stress + Strain)
+#colnames(dds) = 
+#dds = dds[,dds$Drug == 'Cocktail']
+#dds = DESeq(dds, test="LRT", reduced = ~ Stress, parallel = TRUE)
+
+#res = results(dds)
+#res
+#summary(res)
+
+
+```
+Lets do a wald test for hog1
+```{r}
+#dds = DESeq(dds, parallel = TRUE)
+res = results(dds, contrast=c("Strain","HOG1","WT"))
+```
+
+```{r}
+t2g = load_transcripts_to_genes()
+res$Gene = t2g[match(rownames(res), t2g$target_id),]$name
+res$Description = t2g[match(rownames(res), t2g$target_id),]$description
+```
+
+```{r}
+# library(calibrate)
+# with(res, plot(log2FoldChange, -log10(pvalue), pch=20, main="Volcano plot", xlim=c(-1,2.5), ylim = c(0,40)))
+# 
+# # Add colored points: red if padj<0.05, orange of log2FC>1, green if both)
+# with(subset(res, padj<.05 ), points(log2FoldChange, -log10(pvalue), pch=20, col="red"))
+# with(subset(res, abs(log2FoldChange)>1), points(log2FoldChange, -log10(pvalue), pch=20, col="orange"))
+# with(subset(res, padj<.05 & abs(log2FoldChange)>1), points(log2FoldChange, -log10(pvalue), pch=20, col="green"))
+# 
+# # Label points with the textxy function from the calibrate plot
+# library(calibrate)
+# with(subset(res, padj<.05 & abs(log2FoldChange)>1), textxy(log2FoldChange, -log10(pvalue), labs=Gene, cex=.8))
+
+dat = as.data.frame(res) %>% 
+  filter(!is.na(padj) & Gene != 'HIS3') %>% 
+  mutate(Significant = padj < 0.05, 
+         Large_Difference = abs(log2FoldChange) > 1, 
+         Sig_Diff = factor(paste(Significant, Large_Difference, sep="_"), 
+                           labels = c('None', 'Large Difference', 'Significant', 'Large and Significant')))
+
+```
+
+
+```{r}
+# this is for the gene HUG1
+#barchart(r['YML058W-A',])
+```
+
+```{r}
+library(ggvis)
+dat$id <- 1:nrow(dat)  # Add an id column to use ask the key
+
+all_values <- function(x) {
+  if(is.null(x)) return(NULL)
+  row <- dat[dat$id == x$id, ]
+  paste0("<b>", names(row), "</b>:", format(row), collapse = "<br />")
+}
+
+dat %>% 
+  ggvis(x = ~log2FoldChange, y = ~-log10(padj), fill = ~Sig_Diff, text := ~Gene, key := ~id) %>%
+  #layer_points() %>%
+  layer_text(fontSize := 4) %>%
+  add_tooltip(all_values, "hover")
+
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).

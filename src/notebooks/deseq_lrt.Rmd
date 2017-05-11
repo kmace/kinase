@@ -7,13 +7,31 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
-```{r}
+```{r, message=FALSE}
 source('../utils/load_libraries.R')
-source('../utils/load_functions.R')
 source('../utils/load_data.R')
+source('../utils/load_functions.R')
+
+```
+
+```{r}
+
+
+drug_counts = raw_counts[,meta$Drug == 'Cocktail']
+drug_meta = meta[meta$Drug == 'Cocktail', ]
+dds = DESeqDataSetFromMatrix(countData = drug_counts, colData = drug_meta, design = ~ Stress + Strain)
+#dds = dds[,dds$Drug == 'Cocktail']
+dds = DESeq(dds, test="LRT", reduced=~ Stress + Strain)
+res = results(dds)
+res
+summary(res)
 
 
 ```
+
+
+
+
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
 
