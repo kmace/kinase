@@ -17,6 +17,7 @@ Differentating from class 1 and class 3 seems to be doable. class 2 genes may be
 source('../utils/load_libraries.R')
 source('../utils/load_data.R')
 source('../utils/load_functions.R')
+library(ggrepel)
 ```
 
 ```{r}
@@ -24,7 +25,8 @@ source('../utils/load_functions.R')
 
 drug_counts = raw_counts[,meta$Drug == 'Cocktail']
 drug_meta = meta[meta$Drug == 'Cocktail', ]
-#dds = DESeqDataSetFromMatrix(countData = drug_counts, colData = drug_meta, design = ~ Stress + Strain)
+dds = DESeqDataSetFromMatrix(countData = drug_counts, colData = drug_meta, design = ~ Stress + Strain)
+dds = DESeq(dds, parallel = TRUE)
 #colnames(dds) = 
 #dds = dds[,dds$Drug == 'Cocktail']
 #dds = DESeq(dds, test="LRT", reduced = ~ Stress, parallel = TRUE)
@@ -37,14 +39,53 @@ drug_meta = meta[meta$Drug == 'Cocktail', ]
 ```
 Lets do a wald test for hog1
 ```{r}
-#dds = DESeq(dds, parallel = TRUE)
-res = results(dds, contrast=c("Strain","HOG1","WT"))
+volcano = function(dds, contrast, t2g, write_genes = TRUE) {
+res = results(dds, contrast=c("Strain",contrast,"WT"))
+res$Gene = t2g[match(rownames(res), t2g$target_id),]$name
+res$Description = t2g[match(rownames(res), t2g$target_id),]$description
+
+dat = as.data.frame(res) %>% 
+  filter(!is.na(padj) & Gene != 'HIS3' & Gene != 'YOR203W') %>% 
+  mutate(Significant = padj < 0.01, 
+         Large_Difference = abs(log2FoldChange) > 1, 
+         Sig_Diff = factor(paste(Significant, Large_Difference, sep="_"),
+                           levels = c('FALSE_FALSE', 'FALSE_TRUE', 'TRUE_FALSE', 'TRUE_TRUE'),
+                           labels = c('None', 'Large Difference', 'Significant', 'Large and Significant')))
+dat$Gene[dat$Sig_Diff != 'Large and Significant'] = NA
+
+if(write_genes){
+  ouput_dir = '../../output/Strain_Dependent_Genes/'
+  write(dat$Gene[dat$Sig_Diff == 'Large and Significant'], file = paste0(ouput_dir, contrast, '_sig.txt'))
+  write(dat$Gene[dat$Sig_Diff == 'Large and Significant' & dat$log2FoldChange > 0], file = paste0(ouput_dir, contrast, '_sig_up.txt'))
+  write(dat$Gene[dat$Sig_Diff == 'Large and Significant' & dat$log2FoldChange < 0], file = paste0(ouput_dir, contrast, '_sig_down.txt'))
+}
+
+
+if(table(dat$Sig_Diff)[4] > 200){
+  dat$Gene = NA
+}
+
+plot = ggplot(dat,
+              aes(
+                x = log2FoldChange,
+                y = -log10(padj),
+                color = Sig_Diff,
+                label = Gene
+              )) + geom_point() +
+  geom_text_repel(na.rm = TRUE, size=3) + 
+  ggtitle(contrast)
+ggsave(filename=paste0('../../output/Strain_Dependent_Genes/', contrast, '.pdf'),
+       plot=plot)
+
+return(plot)
+}
+
+#volcano(dds, 'HOG1', t2g)
 ```
 
 ```{r}
 t2g = load_transcripts_to_genes()
-res$Gene = t2g[match(rownames(res), t2g$target_id),]$name
-res$Description = t2g[match(rownames(res), t2g$target_id),]$description
+
 ```
 
 ```{r}
