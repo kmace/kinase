@@ -35,6 +35,7 @@ volcano_de = function(dds, contrast, t2g, pvalue_cutoff, fc_cutoff) {
                 )) + geom_point() +
     geom_text_repel(na.rm = TRUE, size=3) + 
     ggtitle(contrast)
+  print(plot)
   return(plot)
 }
 
@@ -67,5 +68,6 @@ volcano_tf = function(dds, contrast, t2g, score_metric, cutoff = NA, NA_rm = TRU
                   label = Gene
                 )) + geom_point() + 
     ggtitle(contrast)
+  print(plot)
   return(plot)
 }
