@@ -24,7 +24,6 @@ all = all %>% dplyr::mutate(Condition = ifelse(Stress=='None',Media,Stress))
 all$Name = t2g[match(all$Gene_Name, t2g$target_id),'name']
 all$Description = t2g[match(all$Gene_Name, t2g$target_id),'description']
 
-
 #is_outlier <- function(x) {
 #  return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
 #}
@@ -49,11 +48,12 @@ all = all %>% group_by(Name, Condition) %>%
                                                NA)) %>%
                 ungroup()
 
+all_data = all
 reporters = read.table('../../input/reference/pathway_reporters.csv', sep='\t', header =T)
 reporters$Gene = as.character(reporters$Gene)
 
-make_plot = function(gene, pathway) {
-dat = all %>% filter(Name == gene)
+make_plot = function(gene, pathway, all, t2g) {
+dat = all %>% dplyr::filter(Name == gene)
 p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
             geom_tile(aes(fill=Expression)) +
             theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -61,7 +61,9 @@ p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
 p_cond_box = ggplot(dat, aes(x = Condition, y = Expression)) +
              geom_boxplot() +
              geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE) +
-             coord_flip()
+             coord_flip() +
+             theme(axis.text.x = element_blank())
+             
 
 p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
                geom_boxplot() +
@@ -76,11 +78,14 @@ p_desc = ggplot() +
 grid.arrange(p_heatmap + theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
           p_cond_box,
           p_strain_box + theme(legend.position="none", axis.text.y=element_blank()),
-          textGrob(do.call(paste, c(as.list(strwrap(text)), sep="\n"))), nrow=2, ncol=2)
+          textGrob(do.call(paste, c(as.list(strwrap(text, width = 0.7 * getOption("width"))), sep="\n"))), nrow=2, ncol=2)
 }
 
+output == FALSE
+if(output){
 pdf('../../output/reporter_genes.pdf', width=14, height=8)
 for (i in 1:dim(reporters)[1]) {
-    make_plot(reporters[i,2], reporters[i,1])
+    make_plot(reporters[i,2], reporters[i,1], all_data)
 }
 dev.off()
+}
