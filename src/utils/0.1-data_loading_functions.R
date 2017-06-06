@@ -8,7 +8,7 @@ load_sample_meta_data = function() {
 								 Media = relevel(factor(Media),'YPD'),
 								 Experimenter = relevel(factor(Experimenter),'Kieran')) %>%
 					unite(Experiment, c(Stress, Media, Drug, Strain_Code), remove = FALSE) %>%
-					mutate(Experiment = relevel(factor(Experiment), 'None_YPD_None'))
+					mutate(Experiment = relevel(factor(Experiment), 'None_YPD_None_WT1'))
 		return(meta)
 }
 
