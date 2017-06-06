@@ -17,10 +17,11 @@ meta$Condition = relevel(factor(meta$Condition), 'YPD')
 
 raw_counts = load_count_matrix(meta,'star')
 
+subset = meta$Experimenter == 'Kieran' & meta$Drug == 'Cocktail'
+meta = meta[subset, ]
+raw_counts = raw_counts[, subset]
 
 dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~ Condition + Strain)
-dds = dds[,dds$Experimenter=='Kieran']
-dds = dds[,dds$Drug == 'Cocktail']
 
 
 dds = DESeq(dds, parallel = TRUE)
