@@ -25,7 +25,9 @@ library(ggrepel)
 
 drug_counts = raw_counts[,meta$Drug == 'Cocktail']
 drug_meta = meta[meta$Drug == 'Cocktail', ]
-dds = DESeqDataSetFromMatrix(countData = drug_counts, colData = drug_meta, design = ~ Stress + Strain)
+dds = DESeqDataSetFromMatrix(countData = drug_counts, 
+                             colData = drug_meta, 
+                             design = ~ Stress + Strain)
 dds = DESeq(dds, parallel = TRUE)
 #colnames(dds) = 
 #dds = dds[,dds$Drug == 'Cocktail']
@@ -40,9 +42,9 @@ dds = DESeq(dds, parallel = TRUE)
 Lets do a wald test for hog1
 ```{r}
 volcano = function(dds, contrast, t2g, write_genes = TRUE) {
-res = results(dds, contrast=c("Strain",contrast,"WT"))
-res$Gene = t2g[match(rownames(res), t2g$target_id),]$name
-res$Description = t2g[match(rownames(res), t2g$target_id),]$description
+  res = results(dds, contrast=c("Strain",contrast,"WT"))
+  res$Gene = t2g[match(rownames(res), t2g$target_id),]$name
+  res$Description = t2g[match(rownames(res), t2g$target_id),]$description
 
 dat = as.data.frame(res) %>% 
   filter(!is.na(padj) & Gene != 'HIS3' & Gene != 'YOR203W') %>% 
@@ -55,9 +57,12 @@ dat$Gene[dat$Sig_Diff != 'Large and Significant'] = NA
 
 if(write_genes){
   ouput_dir = '../../output/Strain_Dependent_Genes/'
-  write(dat$Gene[dat$Sig_Diff == 'Large and Significant'], file = paste0(ouput_dir, contrast, '_sig.txt'))
-  write(dat$Gene[dat$Sig_Diff == 'Large and Significant' & dat$log2FoldChange > 0], file = paste0(ouput_dir, contrast, '_sig_up.txt'))
-  write(dat$Gene[dat$Sig_Diff == 'Large and Significant' & dat$log2FoldChange < 0], file = paste0(ouput_dir, contrast, '_sig_down.txt'))
+  write(dat$Gene[dat$Sig_Diff == 'Large and Significant'], 
+        file = paste0(ouput_dir, contrast, '_sig.txt'))
+  write(dat$Gene[dat$Sig_Diff == 'Large and Significant' & dat$log2FoldChange > 0],
+        file = paste0(ouput_dir, contrast, '_sig_up.txt'))
+  write(dat$Gene[dat$Sig_Diff == 'Large and Significant' & dat$log2FoldChange < 0],
+        file = paste0(ouput_dir, contrast, '_sig_down.txt'))
 }
 
 
@@ -135,6 +140,65 @@ dat %>%
 ```
 
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+Okay lets loop over parametrs and write to dir
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+write_sig = function(dds, contrast, t2g, method = 'cutoff', cutoff=1, top = 100, pval = 0.01) {
+  res = results(dds, contrast=c("Strain",contrast,"WT"))
+  res$Gene = t2g[match(rownames(res), t2g$target_id),]$name
+  res$Description = t2g[match(rownames(res), t2g$target_id),]$description
+
+if(method == 'top'){
+  fc = res$log2FoldChange
+  cutoff_low = min(0, sort(fc)[top])
+  cutoff_high = max(0, sort(fc)[length(fc) - top])
+} else {
+  cutoff_low = cutoff
+  cutoff_high = cutoff
+}
+  
+dat = as.data.frame(res) %>% 
+  filter(!is.na(padj) & Gene != 'HIS3' & Gene != 'YOR203W') %>% 
+  mutate(Significant = padj < pval, 
+         Large_Difference_Up = log2FoldChange > cutoff_high,
+         Large_Difference_Down = log2FoldChange < cutoff_low)
+
+  ouput_dir = '../../output/Strain_Dependent_Genes/'
+  file_root = paste0(ouput_dir, 
+                     contrast,'_', 
+                     pval, '_', 
+                     method, '_', 
+                     if_else(method == 'top', top, cutoff))
+  
+  write(dat$Gene[dat$Significant & dat$Large_Difference_Up],
+        file = paste0(file_root, '_sig_up.txt'))
+  write(dat$Gene[dat$Significant & dat$Large_Difference_Down],
+        file = paste0(file_root, '_sig_down.txt'))
+}
+
+kinase = as.character(unique(as.character(drug_meta$Strain)))
+kinase = kinase[-7]
+
+tops = c(20, 50, 100, 200)
+cuts = c(0.3, 0.5, 0.8, 1)
+pvals = c(1, 0.1, 0.05, 0.01)
+
+tops_settings = expand.grid(top = tops, pval = pvals, contrast = kinase)
+cuts_settings = expand.grid(cutoff = cuts, pval = pvals, contrast = kinase)
+
+# tops
+mapply ("write_sig", 
+        top = tops_settings$top, 
+        pval = tops_settings$pval, 
+        contrast = tops_settings$contrast,
+        MoreArgs=list(dds = dds, t2g = t2g, method = 'top') )
+
+# cuts
+mapply ("write_sig", 
+        cutoff = cuts_settings$cutoff, 
+        pval = cuts_settings$pval, 
+        contrast = cuts_settings$contrast,
+        MoreArgs=list(dds = dds, t2g = t2g, method = 'cutoff') )
+
+
+```
