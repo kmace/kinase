@@ -33,19 +33,19 @@ dds = DESeq(dds, parallel = TRUE)
 # meta = colData(rlt)
 
 # This takes a very ling time
-# vst = varianceStabilizingTransformation(dds, blind = FALSE)
-# vlog = assay(vst)
-# meta = colData(vst)
-
-# This is pretty quick
-baseMean <- rowMeans(counts(dds, normalized=TRUE))
-idx <- sample(which(baseMean > 5), 1000)
-dds.sub <- dds[idx, ]
-dds.sub <- estimateDispersions(dds.sub)
-dispersionFunction(dds) <- dispersionFunction(dds.sub)
-rm(dds.sub)
-vst <- varianceStabilizingTransformation(dds, blind=FALSE)
+vst = varianceStabilizingTransformation(dds, blind = FALSE)
 vlog = assay(vst)
 meta = colData(vst)
+
+# This is pretty quick
+# baseMean <- rowMeans(counts(dds, normalized=TRUE))
+# idx <- sample(which(baseMean > 5), 1000)
+# dds.sub <- dds[idx, ]
+# dds.sub <- estimateDispersions(dds.sub)
+# dispersionFunction(dds) <- dispersionFunction(dds.sub)
+# rm(dds.sub)
+# vst <- varianceStabilizingTransformation(dds, blind=FALSE)
+# vlog = assay(vst)
+# meta = colData(vst)
 
 save.image('../../input/images/normalized_data.RData')
