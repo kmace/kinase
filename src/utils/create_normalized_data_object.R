@@ -20,23 +20,32 @@ raw_counts = load_count_matrix(meta,'star')
 subset = meta$Experimenter == 'Kieran' & meta$Drug == 'Cocktail'
 meta = meta[subset, ]
 raw_counts = raw_counts[, subset]
+rm(subset) # clean unused variables
 
 dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~ Condition + Strain)
 
 
 dds = DESeq(dds, parallel = TRUE)
-rlt = rlogTransformation(dds, blind = FALSE) # This takes a long long time
-rlog = assay(rlt)
-meta = colData(rlt)
 
+# This takes an incredibly long time
+# rlt = rlogTransformation(dds, blind = FALSE)
+# rlog = assay(rlt)
+# meta = colData(rlt)
 
-# dds <- estimateSizeFactors(dds)
-# baseMean <- rowMeans(counts(dds, normalized=TRUE))
-# sum(baseMean > 1)
-# idx <- sample(which(baseMean > 5), 1000)
-# dds.sub <- dds[idx, ]
-# dds.sub <- estimateDispersions(dds.sub)
-# dispersionFunction(dds) <- dispersionFunction(dds.sub)
-# vsd <- varianceStabilizingTransformation(dds, blind=FALSE)
+# This takes a very ling time
+# vst = varianceStabilizingTransformation(dds, blind = FALSE)
+# vlog = assay(vst)
+# meta = colData(vst)
+
+# This is pretty quick
+baseMean <- rowMeans(counts(dds, normalized=TRUE))
+idx <- sample(which(baseMean > 5), 1000)
+dds.sub <- dds[idx, ]
+dds.sub <- estimateDispersions(dds.sub)
+dispersionFunction(dds) <- dispersionFunction(dds.sub)
+rm(dds.sub)
+vst <- varianceStabilizingTransformation(dds, blind=FALSE)
+vlog = assay(vst)
+meta = colData(vst)
 
 save.image('../../input/images/normalized_data.RData')

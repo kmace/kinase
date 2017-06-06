@@ -36,7 +36,7 @@ reorder_cormat <- function(cormat){
     cormat <-cormat[hc$order, hc$order]
 }
 
-correlation_plot = function(data, upper=TRUE) {
+correlation_plot <- function(data, upper=TRUE) {
     cormat <- cor(data)
     # Reorder the correlation matrix
     cormat <- reorder_cormat(cormat)
