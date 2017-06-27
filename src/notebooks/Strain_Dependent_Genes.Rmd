@@ -149,8 +149,9 @@ write_sig = function(dds, contrast, t2g, method = 'cutoff', cutoff=1, top = 100,
   res$Description = t2g[match(rownames(res), t2g$target_id),]$description
 
 if(method == 'top'){
-  fc = res$log2FoldChange
-  cutoff_low = min(0, sort(fc)[top])
+  fc = res$log2FoldChange[res$padj<pval]
+  fc = fc[!is.na(fc)]
+  cutoff_low = min(0, sort(fc)[top + 1])
   cutoff_high = max(0, sort(fc)[length(fc) - top])
 } else {
   cutoff_low = cutoff
@@ -185,6 +186,9 @@ pvals = c(1, 0.1, 0.05, 0.01)
 
 tops_settings = expand.grid(top = tops, pval = pvals, contrast = kinase)
 cuts_settings = expand.grid(cutoff = cuts, pval = pvals, contrast = kinase)
+
+tops_settings$contrast = as.character(tops_settings$contrast)
+cuts_settings$contrast = as.character(cuts_settings$contrast)
 
 # tops
 mapply ("write_sig", 
