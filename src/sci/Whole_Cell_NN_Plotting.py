@@ -92,8 +92,8 @@ kinase_deletion = tflearn.input_data(shape=[None, num_kinase], name='Inactive_Ki
 tf_connectivity = tf.constant(data3, shape=[num_transcription_factors, num_genes], name='TF_to_Gene_Connections')
 
 # This is the layer that I want to perform selective dropout on,
-# I should be able to specify which of the 32 nodes should output zero
-# based on a 1X32 vector of ones and zeros.
+# I should be able to specify which of the 29 nodes should output zero
+# based on a 1X29 vector of ones and zeros.
 kinase = tflearn.fully_connected(stress, num_kinase, activation='relu', name='Kinase')
 with tf.name_scope('Active_Kinases'):
     kinase_dropout = tf.mul(kinase, kinase_deletion)
