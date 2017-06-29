@@ -34,8 +34,15 @@ measurements = measurements %>% filter(Gene_range > 1)
 
 fits = measurements %>%
   dplyr::group_by(Gene) %>%
-  dplyr::do(fitGene = lm(Norm_Expression ~ Strain + Condition, data = .)) %>%
+  dplyr::do(fitGene = lm(Expression ~ Strain + Condition, data = .)) %>%
   broom::tidy(fitGene)
+
+fits %>% dplyr::filter(abs(estimate)>1 & p.value < 0.01) %>% group_by(term) %>% summarise(num_genes = n())
+
+fits %>% dplyr::filter(abs(estimate)>1 & p.value < 0.01) %>% spread(Gene,term,estimate)
+
+good_fits = fits %>% dplyr::filter(abs(estimate)>1 & p.value < 0.01)
+lists = sapply(terms, function(x) select(filter(good_fits,term==x),Gene))
 
 parameters = fits %>% select(Gene, term, estimate) %>% spread(term, estimate) %>% ungroup()
 rownames(parameters) = parameters$Gene
