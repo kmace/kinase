@@ -53,3 +53,21 @@ col_mean = apply(parameter_matrix,2,mean)
 #m = t(m)
 #heatmap3(m[m[,10]>1,-10], labRow = NA, scale='none')
 heatmap3(parameter_matrix, labRow = NA, scale='none')
+
+
+library(heatmaply)
+library(d3heatmap)
+
+shrink_large = function(data, max, min = -max){
+data[data>max] = max
+data[data<min] = min
+return(data)
+}
+
+d3heatmap(a[str_length(rownames(a)) < 7,grep('Cond', colnames(a))], Rowv = NA, Colv=NA)
+
+heatmaply(shrink_large(a[str_length(rownames(a)) < 7,
+          grep('Cond', colnames(a))], 2),
+          Rowv = NA,
+          Colv=NA,
+          scale_fill_gradient_fun= scale_fill_gradient2())
