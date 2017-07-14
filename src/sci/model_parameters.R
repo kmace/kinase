@@ -55,7 +55,7 @@ col_mean = apply(parameter_matrix,2,mean)
 heatmap3(parameter_matrix, labRow = NA, scale='none')
 
 
-library(heatmaply)
+library(plotly)
 library(d3heatmap)
 
 shrink_large = function(data, max, min = -max){
