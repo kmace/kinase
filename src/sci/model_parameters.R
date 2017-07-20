@@ -3,11 +3,13 @@ rm(list=ls())
 load('../../input/images/normalized_data.RData')
 
 library(tidyr)
+library(purrr)
 library(dplyr)
 library(broom)
 library(tibble)
 library(heatmap3)
 library(ggplot2)
+#library(multidplyr)
 
 #vlog = vlog - rowMeans(vlog)
 #row_sd = apply(vlog,1,sd)
@@ -21,71 +23,86 @@ meta_sub = as.data.frame(meta) %>% select(Sample_Name, Condition, Strain)
 
 measurements = left_join(measurements, meta_sub)
 
-measurements = measurements %>%
+genes = measurements %>%
   group_by(Gene) %>%
   mutate(Gene_range = diff(range(Expression)),
          Gene_sd = sd(Expression),
          Gene_mean = mean(Expression),
          Norm_Expression = (Expression - Gene_mean) / Gene_sd) %>%
-  ungroup() %>%
   arrange(Gene)
 
 measurements = measurements %>% filter(Gene_range > 1)
 
-fits = measurements %>%
-  dplyr::group_by(Gene) %>%
-  dplyr::do(fullFit = lm(Expression ~ Strain + Condition, data = .),
-            strainFit = lm(Expression ~ Strain, data = .),
-            conditionFit = lm(Expression ~ Condition, data = .),
-            basicFit = lm(Expression ~ 1, data = .)) %>%
-  ungroup() %>%
-  tidyr::gather(Model_Type, Model, -Gene) %>%
-  rowwise() 
+full_lm = function(df) {
+  lm(Expression ~ Strain + Condition, data = df)
+}
 
-condition_residuals = measurements %>%
-  dplyr::group_by(Gene) %>%
-  dplyr::do(conditionFit = lm(Expression ~ Condition, data = .)) %>%
-  ungroup() %>%
-  tidyr
+condition_lm = function(df) {
+  lm(Expression ~ Condition, data = df)
+}
+
+strain_lm = function(df) {
+  lm(Expression ~ Strain, data = df)
+}
+
+genes = genes %>%
+nest() %>%
+#partition() %>%
+mutate(fullModel = map(data, full_lm),
+       conditionModel = map(data, condition_lm),
+       strainModel = map(data, strain_lm),
+       augment_fullModel = fullModel %>% map(augment),
+       augment_conditionModel = conditionModel %>% map(augment),
+       augment_strainModel = strainModel %>% map(augment),
+       full_residual = augment_fullModel %>% map_dbl(".resid"),
+       condition_residual = augment_conditionModel %>% map_dbl(".resid"),
+       strain_residual = augment_strainModel %>% map_dbl(".resid")) %>%
+       unnest(data, full_residual, condition_residual, strain_residual) #%>%
+#collect()
 
 
 
-parameters = fits %>%
+
+model_parameter_stats = fits %>%
   broom::tidy(Model)
 
-strength = fits %>%
+model_stats = fits %>%
   broom::glance(Model)
 
-strength %>% 
-  filter(Model_Type != 'basicFit') %>% 
-  ggplot(aes(x = r.squared, color=Model_Type, fill = Model_Type)) + 
+input_data_stats = fits %>%
+  broom::augment(Model)
+
+
+strength %>%
+  filter(Model_Type != 'basicFit') %>%
+  ggplot(aes(x = r.squared, color=Model_Type, fill = Model_Type)) +
   geom_density(alpha=.5)
 
 sq = strength %>% ungroup() %>% select(name, Model_Type, r.squared) %>%
-  filter(Model_Type != 'basicFit') %>% 
+  filter(Model_Type != 'basicFit') %>%
   spread(Model_Type, r.squared)
 
 all_models = strength %>%
              filter(Model_Type != 'basicFit') %>%
-             ggplot(aes(x = r.squared, 
-                        fill = Model_Type)) + 
-             geom_density(alpha = 0.5) + 
+             ggplot(aes(x = r.squared,
+                        fill = Model_Type)) +
+             geom_density(alpha = 0.5) +
              ggtitle(label = 'Comparing fits of Models', subtitle = 'Percentage of Variance Explained by each model')
 
 all_models
 
-strain_vs_condition = ggplot(sq, 
-                             aes(x = conditionFit, 
-                                 y = strainFit, 
-                                 name = name)) + 
-                    geom_point() + 
+strain_vs_condition = ggplot(sq,
+                             aes(x = conditionFit,
+                                 y = strainFit,
+                                 name = name)) +
+                    geom_point() +
                     ggtitle(label = 'Comparing fits of Partial Models', subtitle = 'Percentage of Variance Explained by each model')
 
-additive_vs_full =  ggplot(sq, 
-                           aes(x = conditionFit + strainFit, 
-                               y = fullFit, 
-                               name = name)) + 
-                    geom_point() + 
+additive_vs_full =  ggplot(sq,
+                           aes(x = conditionFit + strainFit,
+                               y = fullFit,
+                               name = name)) +
+                    geom_point() +
                     ggtitle(label = 'Comparing redundancy of Partial Models', subtitle = 'Percentage of Variance Explained by summation of partial and full')
 
 
