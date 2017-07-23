@@ -23,45 +23,42 @@ meta_sub = as.data.frame(meta) %>% select(Sample_Name, Condition, Strain)
 
 measurements = left_join(measurements, meta_sub)
 
+f1 = Expression ~ Strain
+f2 = Expression ~ Condition
+f3 = Expression ~ Strain + Condition
+
+lin_mod = function(formula) {
+  function(data) {
+    lm(formula, data = data)
+  }
+}
+
+strain_lm = lin_mod(f1)
+condition_lm = lin_mod(f2)
+full_lm = lin_mod(f3)
+
+
 genes = measurements %>%
   group_by(Gene) %>%
   mutate(Gene_range = diff(range(Expression)),
          Gene_sd = sd(Expression),
          Gene_mean = mean(Expression),
          Norm_Expression = (Expression - Gene_mean) / Gene_sd) %>%
-  arrange(Gene)
+  filter(Gene_range > 1) %>%
+  nest() %>%
+  mutate(fullModel = map(data, full_lm),
+         conditionModel = map(data, condition_lm),
+         strainModel = map(data, strain_lm),
+         augment_fullModel = fullModel %>% map(augment),
+         augment_conditionModel = conditionModel %>% map(augment),
+         augment_strainModel = strainModel %>% map(augment),
+         full_residual = augment_fullModel %>% map_dbl(".resid"),
+         condition_residual = augment_conditionModel %>% map_dbl(".resid"),
+         strain_residual = augment_strainModel %>% map_dbl(".resid")) %>%
+         arrange(Gene)
 
-measurements = measurements %>% filter(Gene_range > 1)
-
-full_lm = function(df) {
-  lm(Expression ~ Strain + Condition, data = df)
-}
-
-condition_lm = function(df) {
-  lm(Expression ~ Condition, data = df)
-}
-
-strain_lm = function(df) {
-  lm(Expression ~ Strain, data = df)
-}
-
-genes = genes %>%
-nest() %>%
-#partition() %>%
-mutate(fullModel = map(data, full_lm),
-       conditionModel = map(data, condition_lm),
-       strainModel = map(data, strain_lm),
-       augment_fullModel = fullModel %>% map(augment),
-       augment_conditionModel = conditionModel %>% map(augment),
-       augment_strainModel = strainModel %>% map(augment),
-       full_residual = augment_fullModel %>% map_dbl(".resid"),
-       condition_residual = augment_conditionModel %>% map_dbl(".resid"),
-       strain_residual = augment_strainModel %>% map_dbl(".resid")) %>%
-       unnest(data, full_residual, condition_residual, strain_residual) #%>%
-#collect()
-
-
-
+  #unnest(data, full_residual, condition_residual, strain_residual) #%>%
+  #collect()
 
 model_parameter_stats = fits %>%
   broom::tidy(Model)
