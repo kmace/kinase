@@ -21,7 +21,16 @@ AGA1 is a reporter for the mating pathway. It seems to turn on in Salt Stress wh
 * HOG1
 * SNF1
 
-These kinases all seem to be in the same salt pathway. I wonder if this is known? do they share a common kinase?
+Two of these kinases seem to be in the same salt pathway. I wonder if this is known? do they share a common kinase? (yes they are)
+
+The SNF1 one is novel. according to SGD:
+	AMP-activated S/T protein kinase; forms a complex with Snf4p and members of the Sip1p/Sip2p/Gal83p family; required for transcription of glucose-repressed genes, thermotolerance, sporulation, and peroxisome biogenesis; regulates nucleocytoplasmic shuttling of Hxk2p; regulates filamentous growth and acts as a non-canonical GEF, activating Arf3p during invasive growth; SUMOylation by Mms21p inhibits its function and targets Snf1p for destruction via the Slx5-Slx8 Ub ligase
+
+So SNF1 must act directly or indirectly to supress the mating pathway under salt. but it also is requred for a bunch of stresses:
+* Glucose repressed genes
+* Heat tolerance
+* Sporulation (how is this connected with mating if at all?)
+* Preoxisone biogenesis
 
 according to david:
 AGA1 has salt as an outlier in the hog1 and pbs2 strains (and in snf1 – more new biology!).

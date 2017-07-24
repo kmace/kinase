@@ -1,0 +1,17 @@
+A simple model of gene expression:
+
+For each gene, we model its expression as a simple linear combination of 3 terms:
+V, W, and C. we do this by least squares regression.
+
+V represents the effect a particular condition has on gene g
+W represents the effect a particular kinase inhibition has on gene g
+C represetns the intercept, or the gene level in the control scenario (condition = YPD, strain = Wild Type)
+
+Description of heatmap rows:
+each row in the figure corresponds to a single gene
+
+Description of heatmap columns:
+For the Expression heatmap - each column represents the gene's expression levels at for a given condition and strain
+For the V heatmap - each column represents the contribution that a particular condition has on each gene
+for the W heatmap - each column represents the contribution that a particualr kinase inhibition has on each gene
+There is only a single column in C, which represents the gene expression level for the base case, where condition = 'YPD' and strain = 'Wild Type', and therefore V = 0, and W = 0
