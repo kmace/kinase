@@ -11,6 +11,7 @@ library(shiny)
 library(stringr)
 library(tidyr)
 library(dplyr)
+library(tibble)
 library(ggplot2)
 library(gridExtra)
 library(RGraphics)
@@ -23,7 +24,7 @@ load('residuals.RData')
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    # Application title
-   titlePanel("Single Gene Analysis"),
+   titlePanel("Model Residuals"),
 
    # Sidebar with a slider input for number of bins
    fluidRow(
@@ -31,25 +32,23 @@ ui <- fluidPage(
             selectInput("gene",
                         "Gene of Interest:",
                         choices = sort(unique(
-                          as.character(t2g$name)
+                          as.character(genes$name)
                         )))),
      plotOutput("genePlot")
 
    )
 )
 
-make_plot = function(gene, pathway, all, t2g) {
-  dat = all %>% dplyr::filter(name == gene)
-  p_heatmap1 = ggplot(dat, aes(y=Condition, x = Strain)) +
-    geom_tile(aes(fill=Expression)) +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  p_heatmap2 = ggplot(dat, aes(x = Strain, y = Condition, fill = Strain_residual)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+make_plot = function(gene, all) {
+  dat = all %>% dplyr::filter(name == gene) %>% unnest()
 
+  p_heatmap1 = ggplot(dat, aes(x = Strain, y = Condition, fill = Base_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ 1")
 
-  p_heatmap3 = ggplot(dat, aes(x = Strain, y = Condition, fill = Condition_residual)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  p_heatmap2 = ggplot(dat, aes(x = Strain, y = Condition, fill = Strain_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ Strain")
 
+  p_heatmap3 = ggplot(dat, aes(x = Strain, y = Condition, fill = Condition_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ Condition")
 
-  p_heatmap4 = ggplot(dat, aes(x = Strain, y = Condition, fill = Full_residual)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  p_heatmap4 = ggplot(dat, aes(x = Strain, y = Condition, fill = Full_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ Strain + Condtion")
 
 
 
@@ -65,7 +64,7 @@ server <- function(input, output) {
 
    output$genePlot <- renderPlot({
       # generate bins based on input$bins from ui.R
-      make_plot(input$gene, t2g$target_id[which(t2g$name == input$gene)], measurements, t2g)
+      make_plot(input$gene, genes)
    })
 }
 
