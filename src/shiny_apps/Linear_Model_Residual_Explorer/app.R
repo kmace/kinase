@@ -42,13 +42,33 @@ ui <- fluidPage(
 make_plot = function(gene, all) {
   dat = all %>% dplyr::filter(name == gene) %>% unnest()
 
-  p_heatmap1 = ggplot(dat, aes(x = Strain, y = Condition, fill = Base_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ 1")
+  p_heatmap1 = ggplot(dat, aes(x = Strain, y = Condition, fill = Base_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ 1")
 
-  p_heatmap2 = ggplot(dat, aes(x = Strain, y = Condition, fill = Strain_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ Strain")
+  p_heatmap2 = ggplot(dat, aes(x = Strain, y = Condition, fill = Strain_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Strain")
 
-  p_heatmap3 = ggplot(dat, aes(x = Strain, y = Condition, fill = Condition_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ Condition")
+  p_heatmap3 = ggplot(dat, aes(x = Strain, y = Condition, fill = Condition_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Condition")
 
-  p_heatmap4 = ggplot(dat, aes(x = Strain, y = Condition, fill = Full_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + labs(fill = "Residual") + ggtitle("Expression ~ Strain + Condtion")
+  p_heatmap4 = ggplot(dat, aes(x = Strain, y = Condition, fill = Full_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Strain + Condtion")
 
 
 
