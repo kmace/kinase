@@ -46,4 +46,8 @@ genes = measurements %>%
   mutate_at(.vars=vars(ends_with('model')), .funs = funs(aug = map(.,augment))) %>%
   mutate_at(.vars=vars(ends_with('aug')), .funs = funs(resid = map(.,'.resid'))) %>%
   arrange(Gene)
+
+colnames(t2g)[1] = 'Gene'
+
+genes = left_join(genes, t2g)
 save.image('../../input/images/model_parameters.RData')
