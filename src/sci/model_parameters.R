@@ -20,6 +20,7 @@ vlog = as.data.frame(vlog)
 vlog$Gene = rownames(vlog)
 measurements = gather(vlog, Sample_Name, Expression, -Gene)
 #measurements %<>% as_tibble()
+
 # should be a left join on the meta subsetted
 meta_sub = as.data.frame(meta) %>% select(Sample_Name, Condition, Strain)
 
@@ -49,6 +50,7 @@ genes = measurements %>%
   mutate_at(.vars=vars(ends_with('model')), .funs = funs(aug = map(.,augment))) %>%
   mutate_at(.vars=vars(ends_with('aug')), .funs = funs(resid = map(.,'.resid'))) %>%
   arrange(Gene)
+
 
 res_matrix = genes %>% 
   select(Gene, data, ends_with('resid')) %>% 
@@ -169,3 +171,9 @@ full = get_cor(res_matrix, type='Full')
 #           Rowv = NA,
 #           Colv=NA,
 #           scale_fill_gradient_fun= scale_fill_gradient2())
+
+colnames(t2g)[1] = 'Gene'
+
+genes = left_join(genes, t2g)
+save.image('../../input/images/model_parameters.RData')
+
