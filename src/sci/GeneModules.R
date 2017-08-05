@@ -17,27 +17,27 @@ mega = load_megaYeast()
 mx = mega$data
 mmeta = mega$meta
 
-common_genes = Reduce(intersect,
-                      list(rownames(gx),
-                           rownames(x),
+common_genes = Reduce(intersect, 
+                      list(rownames(gx), 
+                           rownames(x), 
                            rownames(px),
                            rownames(mx)))
 
-all_genes = Reduce(union,
-                      list(rownames(gx),
-                           rownames(x),
+all_genes = Reduce(union, 
+                      list(rownames(gx), 
+                           rownames(x), 
                            rownames(px),
                            rownames(mx)))
 
-venn(list(gasch = rownames(gx),
-          mydata = rownames(x),
+venn(list(gasch = rownames(gx), 
+          mydata = rownames(x), 
           pronk = rownames(px),
           mega = rownames(mx)))
 
 '%!in%' <- function(x,y)!('%in%'(x,y))
 
-missing = venn(list(gasch = all_genes[all_genes %!in% rownames(gx)],
-          mydata = all_genes[all_genes %!in% rownames(x)],
+missing = venn(list(gasch = all_genes[all_genes %!in% rownames(gx)], 
+          mydata = all_genes[all_genes %!in% rownames(x)], 
           pronk = all_genes[all_genes %!in% rownames(px)],
           mega = all_genes[all_genes %!in% rownames(mx)]))
 intersections = attr(missing,'intersections')
@@ -54,3 +54,17 @@ datasetlist = list(
 library(INSPIRE)
 
 res = INSPIRE(datasetlist = datasetlist, mcnt = 100, lambda = 0.01, printoutput = 1)
+
+
+clusters = res$Z[[1]]
+clusters = tibble(Gene = names(clusters), Cluster = clusters)
+clusters = left_join(clusters, t2g, by=c('Gene' = 'target_id'))
+clusters = clusters %>% arrange(Cluster)
+write.csv(clusters,file='clusters.csv')
+
+dir.create('INSPIRE_clusters')
+clusters %>% 
+  group_by(Cluster) %>% 
+  do(write_csv(., path = paste0('INSPIRE_clusters/cluster_', 
+                                as.character(unique(.$Cluster)), 
+                                '.csv')))

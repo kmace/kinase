@@ -22,7 +22,7 @@ library(mclust)
 library(pheatmap)
 #library(plotly)
 #Poisson Distance (Witten 2011), implemented in the PoiClaClu package. This measure of dissimilarity between counts also takes the inherent variance structure of counts into consideration when calculating the distances between samples
-library(PoiClaClu)
+#library(PoiClaClu)
 library(RColorBrewer)
 library(reshape2)
 library(rhdf5)
