@@ -53,4 +53,4 @@ datasetlist = list(
 
 library(INSPIRE)
 
-res = INSPIRE(datasetlist = datasetlist, mcnt = 90, lambda = 0.01, printoutput = 1)
+res = INSPIRE(datasetlist = datasetlist, mcnt = 100, lambda = 0.01, printoutput = 1)
