@@ -27,7 +27,7 @@ meta = meta %>% mutate(Condition = if_else(Stress=='None',
                                            as.character(Stress)
                                           ))
 meta$Condition = as.factor(meta$Condition)
-x = assay(vsd)
+x = assay(vst)
 x = x - rowMeans(x)
 colnames(x) = meta$Sample_Name
 
@@ -44,7 +44,7 @@ mega = load_megaYeast()
 mx = mega$data
 mmeta = mega$meta
 
-common_genes = Reduce(intersect, 
+  common_genes = Reduce(intersect, 
                       list(rownames(gx), 
                            rownames(x), 
                            rownames(px),
