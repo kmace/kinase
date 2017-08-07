@@ -1,0 +1,96 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+```{r}
+library(tidyverse)
+library(plotly)
+load('../../input/images/model_parameters.RData')
+```
+
+Now that we have the standardized residuals, lets take a look at them. What structure do they have? lets take a deep dive.
+
+First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that a residual of 1 should be as unlikely as a sigma of 1. lets check
+```{r}
+genes %>% select(Full_model_aug_resid) %>% unnest() %>% pull() %>% hist(breaks = 200)
+```
+Okay, that looks good, but what are the mean and variance? we expect 0, and 1.
+
+```{r}
+resids = genes %>% select(Full_model_aug_resid) %>% unnest() %>% pull()
+print(paste('Mean:', mean(resids)))
+print(paste('Standard Deviation:', sd(resids)))
+
+```
+Close enough!
+
+Okay, next, lets extract interactions that have a residuals that are 3 sigmas away, and lets take a look at the top ones:
+
+```{r}
+genes %>% select(Gene, name, data,Full_model_aug_resid) %>% unnest() %>% arrange(-abs(Full_model_aug_resid)) %>% select(name, Gene, Full_model_aug_resid, Strain, Condition) %>% filter(abs(Full_model_aug_resid) > 3) %>% left_join(t2g %>% select(Gene, description)) %>% rename(Full_Model_error = Full_model_aug_resid) -> hypotheses
+
+knitr::kable(hypotheses[1:15,], caption = 'The most significant residuals')
+```
+
+This table is availble as a supplemental table saved here:
+
+```{r}
+write.csv(hypotheses, file = 'hypotheses.csv')
+```
+
+Next, lets see what `Condition + Strain` pairs contain significant residuals over all genes in the ESR:
+
+```{r}
+hypotheses %>% 
+  filter(Gene %in% c(scan('../../input/ESR/repressed_ESR.txt', what = character()),
+                     scan('../../input/ESR/activated_ESR.txt', what = character()))) %>%
+  select(Condition, Strain) %>% 
+  table() %>%
+  `+`(1) %>%
+  log() %>%
+  heatmap(col=viridis::viridis(20))
+
+```
+
+### One quick observation here:
+* Kinases in the same pathway cluster together:
+    + SLT2 and PKC are very closly clustered!
+    + PBS2 and HOG1 are very closly clutered!
+* SCH9 Seems to have an effect, but only in YPD?
+
+Okay, so if this is true, maybe we should see that the residuals between PBS2, and HOG1 to corrolate for genes that have significant residuals. lets check that now:
+
+```{r}
+p = hypotheses %>% filter(Strain %in% c('HOG1', 'PBS2')) %>% select(name, Full_Model_error, Strain, Condition) %>% spread(Strain, Full_Model_error) %>% mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% ggplot(aes(x=HOG1,y=PBS2,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
+plotly::ggplotly(p)
+```
+
+Wow, okay, weird, both positive and negative correlation on the genes that have both scores... hmmm interesting. Lets color by condition. There you go! Pairs that are under salt are correlated! where as conditions that are not salt are anticorrelated. How strange?
+
+I dont know much about SLT2, and PCK1, other than they are in the same pathway. Lets take a look at them.
+
+```{r}
+p = hypotheses %>% filter(Strain %in% c('SLT2', 'PKC1')) %>% select(name, Full_Model_error, Strain, Condition) %>% spread(Strain, Full_Model_error) %>% mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% ggplot(aes(x=SLT2,y=PKC1,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
+plotly::ggplotly(p)
+```
+Okay, no genes are significant with sigma cutoff of 3, but there is some correlation for sigma cutoff 2. shown below:
+
+```{r}
+p = genes %>% select(Gene, name, data,Full_model_aug_resid) %>% unnest() %>% arrange(-abs(Full_model_aug_resid)) %>% select(name, Gene, Full_model_aug_resid, Strain, Condition) %>% filter(abs(Full_model_aug_resid) > 2) %>% left_join(t2g %>% select(Gene, description)) %>% rename(Full_Model_error = Full_model_aug_resid) %>% filter(Strain %in% c('SLT2', 'PKC1')) %>% select(name, Full_Model_error, Strain, Condition) %>% spread(Strain, Full_Model_error) %>% mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% ggplot(aes(x=SLT2,y=PKC1,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
+plotly::ggplotly(p)
+```
+
+Okay enough of that now, lets look at some clusters that we generated with INSPIRE:
+
+I happen to know that FUS1 cluster is cluster 36 in this dataset
+```{r}
+clusters = read.csv('../sci/clusters.csv')
+want = clusters %>% filter(Cluster==36) %>% select(Gene)
+genes %>% filter(Gene %in% want$Gene) %>% select(data, Full_model_aug_resid) %>% unnest() %>% select(Strain, Condition, ends_with('resid')) %>% group_by(Strain,Condition) %>% summarise_all(mean) %>% ggplot(aes(x = Strain, y= Condition, fill = Full_model_aug_resid)) + geom_tile() + scale_fill_gradient2()
+
+
+```
+WOW!!! these genes all have the FUS1 patturn! so the image that we believed for fus1, ie that pbs2 is required to keep it off in salt, is true for most of the cluster! if we therefore average the residuals for each `Condition, Strain` pair, we still get the phenominon! which is dope!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
