@@ -19,9 +19,34 @@ make_tsne_plot = function(mat){
   return(meta_pc)
 }
 
+# For the samples:
+library(tsne) # original implementation, exact tsne, slow
 pdf('tsnes.pdf')
 base_dr = make_tsne_plot(base)
 condition_dr = make_tsne_plot(condition)
 strain_dr = make_tsne_plot(strain)
 full_dr = make_tsne_plot(full)
 dev.off()
+
+
+#for the genes:
+library(Rtsne) # much faster, but aproximate
+# We will let Rtsne do the PCA for us.
+out = Rtsne(base)
+colnames(out$Y) = c('TSNE1', 'TSNE2')
+gene_cols = cols[rownames(base) %in% 
+                   scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', 
+                        what = character()) + 1]
+plot(TSNE1~TSNE2, 
+     data = out$Y, 
+     col = gene_cols, 
+     main = 'activated ESR')
+
+gene_cols = cols[rownames(base) %in% 
+                   scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', 
+                        what = character()) + 1]
+plot(TSNE1~TSNE2, 
+     data = out$Y, 
+     col = gene_cols,
+     main = 'repressed ESR')
+
