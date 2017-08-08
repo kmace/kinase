@@ -1,3 +1,5 @@
+load('../../input/images/model_parameters.RData')
+
 make_tsne_plot = function(mat){
   
   mat_meta = tibble(cname = colnames(mat)) %>% 
