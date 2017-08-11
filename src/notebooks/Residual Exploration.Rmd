@@ -63,7 +63,7 @@ hypotheses %>%
 Okay, so if this is true, maybe we should see that the residuals between PBS2, and HOG1 to corrolate for genes that have significant residuals. lets check that now:
 
 ```{r}
-p = hypotheses %>% filter(Strain %in% c('HOG1', 'PBS2')) %>% select(name, Full_Model_error, Strain, Condition) %>% spread(Strain, Full_Model_error) %>% mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% ggplot(aes(x=HOG1,y=PBS2,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
+p = hypotheses %>% filter(Strain %in% c('HOG1', 'PBS2')) %>% select(name, Full_Model_error, Strain, Condition) %>% spread(Strain, Full_Model_error) %>% mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% ggplot(aes(x=HOG1,y=PBS2,fill=Condition,color = Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
 plotly::ggplotly(p)
 ```
 
@@ -88,7 +88,8 @@ I happen to know that FUS1 cluster is cluster 36 in this dataset
 ```{r}
 clusters = read.csv('../sci/clusters.csv')
 want = clusters %>% filter(Cluster==36) %>% select(Gene)
-genes %>% filter(Gene %in% want$Gene) %>% select(data, Full_model_aug_resid) %>% unnest() %>% select(Strain, Condition, ends_with('resid')) %>% group_by(Strain,Condition) %>% summarise_all(mean) %>% ggplot(aes(x = Strain, y= Condition, fill = Full_model_aug_resid)) + geom_tile() + scale_fill_gradient2()
+genes %>% filter(Gene %in% want$Gene) %>% select(data, Full_model_aug_resid) %>% unnest() %>% select(Strain, Condition, ends_with('resid')) %>% group_by(Strain,Condition) %>% summarise_all(mean) %>% ggplot(aes(x = Strain, y= Condition, fill = Full_model_aug_resid)) + geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
 
 
 ```
