@@ -34,6 +34,7 @@ dev.off()
 #for the genes:
 library(Rtsne) # much faster, but aproximate
 # We will let Rtsne do the PCA for us.
+cols = viridis::viridis(2)
 out = Rtsne(base)
 colnames(out$Y) = c('TSNE1', 'TSNE2')
 gene_cols = cols[rownames(base) %in% 
