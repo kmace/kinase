@@ -1,12 +1,12 @@
-### Discrepancies in the linear model predict epistatic relationships
+## Discrepancies in the linear model predict epistatic relationships
 ![Salt Example](img/HOG_PBS_RESID.png)
 
-#### residual profiles cluster into functionally enriched modules:
+### residual profiles cluster into functionally enriched modules:
 <!-- (so do the coefficients from before?) -->
 *  GO
 *  MEME/Scope
 
-#### Error modules (groups of error profiles) reveal Known classes of epistatic relationships
+### Error modules (groups of error profiles) reveal Known classes of epistatic relationships
 <!-- Class 1 -->
 The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.  
 

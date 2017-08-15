@@ -1,4 +1,4 @@
-### Condition and Strain identities explain non-redundant aspects of the gene expression
+## Condition and Strain identities explain non-redundant aspects of the gene expression
 
 
 ![Increased R2](img/added_r2_as_last.png)
