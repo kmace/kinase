@@ -1,0 +1,105 @@
+### The full linear model of Condition and Stress identity accurately describes gene expression data
+(or at least for most genes)
+
+1. What's happening: I'm going to build the linear model
+2. I'm going to show that it has good performance over most genes. 
+
+#### Building the model:
+
+```{r}
+rm(list=ls())
+
+load('../../input/images/normalized_data.RData')
+
+library(tidyr)
+library(purrr)
+library(dplyr)
+library(broom)
+library(purrr)
+library(tibble)
+library(heatmap3)
+library(ggplot2)
+#library(magrittr)
+#library(multidplyr)
+
+#vlog = vlog - rowMeans(vlog)
+#row_sd = apply(vlog,1,sd)
+#vlog = apply(vlog,2,function(x) x / row_sd)
+
+vlog = as.data.frame(vlog)
+vlog$Gene = rownames(vlog)
+measurements = gather(vlog, Sample_Name, Expression, -Gene)
+#measurements %<>% as_tibble()
+
+# should be a left join on the meta subsetted
+meta_sub = as.data.frame(meta) %>% select(Sample_Name, Condition, Strain)
+
+measurements = left_join(measurements, meta_sub)
+
+lin_mod = function(formula) {
+  function(data, ...){
+    map(data, ~ lm(formula, data = .))
+  }
+}
+
+list_model <- list(Strain_model = Expression ~ Strain,
+                   Condition_model = Expression ~ Condition,
+                   Full_model = Expression ~ Strain + Condition,
+                   Base_model = Expression ~ 1) %>%
+  lapply(lin_mod)
+
+genes = measurements %>%
+  group_by(Gene) %>%
+  mutate(Gene_range = diff(range(Expression)),
+         Gene_sd = sd(Expression),
+         Gene_mean = mean(Expression),
+         Norm_Expression = (Expression - Gene_mean) / Gene_sd) %>%
+  filter(Gene_range > 1) %>%
+  nest() %>%
+  mutate_at(.vars=("data"),.funs=list_model)
+
+```
+So we've built a model for each gene. lets quickly look at the data frame 
+
+
+```{r}
+head(genes)
+```
+
+In order to asses the quality for each fit, lets calculate the $R^2$, or the percentage of variance explained for each gene from the model.
+
+```{r}
+mod_q = genes %>%
+  select(Gene, name, data, ends_with('model')) %>%
+  mutate_at(.vars=vars(ends_with('model')), 
+            .funs = funs(glance = map(.,glance))) %>%
+  select(Gene, name, ends_with('glance')) %>%
+  gather(model_type, model_data, -Gene, -name) %>% 
+  mutate(model_type = map(model_type, function(x) strsplit(x,'_')[[1]][1])) %>% 
+  unnest()
+
+head(mod_q)
+```
+
+Lets look at the $R^{2}$ for each gene in the full model:
+
+```{r}
+mod_q %>% 
+    filter(model_type == 'Full') %>% 
+    ggplot(aes(x=r.squared)) + 
+    geom_density(fill='blue', alpha=.5) +
+    ggtitle('Percentage of variance explained by the full model')
+```
+ Okay, so for most genes, the model does well. For what genes does it perform badly?
+ 
+ 
+```{r}
+mod_q %>% 
+    filter(model_type == 'Full') %>% 
+    arrange(r.squared)
+```
+What makes the model week? are there any features of the genes that have low scores? $R^2$ is a general thing for all 300 data points, so its not like its pulling out massive outliers (FUS1 and HSP12 have very hight $R^2$)
+
+Proving that this model is actually performing well:
+
+What is the R^2 for this data vs data that is row shuffled, column shuffled, or completely shuffled?

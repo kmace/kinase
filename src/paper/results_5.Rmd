@@ -1,0 +1,20 @@
+### Discrepancies in the linear model predict epistatic relationships
+![Salt Example](img/HOG_PBS_RESID.png)
+
+#### residual profiles cluster into functionally enriched modules:
+<!-- (so do the coefficients from before?) -->
+*  GO
+*  MEME/Scope
+
+#### Error modules (groups of error profiles) reveal Known classes of epistatic relationships
+<!-- Class 1 -->
+The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.  
+
+1. If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair  
+    * HSP12 on Salt + PKA (Get GD?)
+2. If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response)
+	  * Mating pathway  
+
+INSPIRE Cluster 36 (Contains FUS1 and other mating genes)
+
+![Cluster 36](img/cluster36.png)

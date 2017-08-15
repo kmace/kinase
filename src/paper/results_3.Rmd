@@ -1,0 +1,7 @@
+### Condition and Strain identities explain non-redundant aspects of the gene expression
+
+
+![Increased R2](img/added_r2_as_last.png)
+
+What does strains give you, that conditions dont?
+break down ESR
