@@ -57,7 +57,7 @@ res_matrix = genes %>%
   unnest() %>%
   group_by(Strain, Gene, Condition) %>%
   # should only apply to WT
-  summarize_at(.vars=vars(ends_with('resid')), mean) %>%
+  summarize_at(.vars=vars(ends_with('resid')), median) %>%
   ungroup() %>%
   mutate(sample_id = paste(Condition,Strain, sep = '_')) %>%
   select(Gene, sample_id, ends_with('resid')) %>%
