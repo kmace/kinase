@@ -1,43 +1,43 @@
-### Pbs2 is independently required for activation of (a submodule of) the ESR under stress.
+## Pbs2 is independently required for activation of (a submodule of) the ESR under stress.
 
-#### Claim 1: PBS2 is required for proper activation of GSR
-##### Other Evidence
+### Claim 1: PBS2 is required for proper activation of GSR
+#### Other Evidence
 RNA-seq Evidence: Lower GSR Expression in stress with PBS2 strain
 
-##### Idea:
+#### Idea:
 Measure ESR activity while removing PBS2
 
-##### Experiment:
+#### Experiment:
 MSN2 Localization after glucose dropout with and without PBS2
 HSP12 Expression after Glucose dropout with and without PBS2
 
-##### Expect to see:
+#### Expect to see:
 Activity go down with PBS2 delete
 
-#### Claim 2: PBS2 acts at, or upstream of PKA
+### Claim 2: PBS2 acts at, or upstream of PKA
 
-##### Idea:
+#### Idea:
 Can direct modulation of PKA activity rescue the PBS2 phenotype? If so the effect of PBS2 must be upstream of, or at the level of PKA
 
-##### Experiment:
+#### Experiment:
 MSN2 Localization with direct PKA inhibition with and without PBS2
 HSP12 Expression with direct PKA inhibition with and without PBS2
 
-##### Expect to see:
+#### Expect to see:
 Direct PKA inhibition to produce same levels of activity, regardless of PBS2 state
 
-##### Results:
+#### Results:
 ![pbs required for HSP12 activation, and upstream of PKA](img/HSP12-GFP_tpk-as_pbs2_gluc_1NM.png)
 
-#### Claim 3: PBS2 acts at or downstream of RAS
+### Claim 3: PBS2 acts at or downstream of RAS
 
-##### Idea:
+#### Idea:
 Can direct modulation of RAS activity rescue the PBS2 phenotype? If so, the effect of PBS2 must be upstream of, or at the level of RAS. If not, PBS2 must act somewhere downstream of RAS.
 
-##### Experiment:
+#### Experiment:
 Measure MSN2 Localization with RAS held in the dominant negative state (PKA off, MSN2 nuclear) followed by PBS2 inactivation
 
-##### Expect to see:
+#### Expect to see:
 MSN2 becomes less nuclear (more cytoplasmic) after PBS2 is inactivated. (This requires that the PBS2-as has normal function in the absence of 1-NMPP1)
 
-#### Claim 4: PBS2 has a secondary function to Hog1
+### Claim 4: PBS2 has a secondary function to Hog1

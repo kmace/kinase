@@ -1,10 +1,10 @@
-### The full linear model of Condition and Stress identity accurately describes gene expression data
+## The full linear model of Condition and Stress identity accurately describes gene expression data
 (or at least for most genes)
 
 1. What's happening: I'm going to build the linear model
 2. I'm going to show that it has good performance over most genes. 
 
-#### Building the model:
+### Building the model:
 
 ```{r}
 rm(list=ls())
@@ -63,7 +63,10 @@ So we've built a model for each gene. lets quickly look at the data frame
 
 
 ```{r}
-head(genes)
+colnames(t2g)[1] = 'Gene'
+genes = genes %>% left_join(t2g)
+#knitr::kable(head(genes,100))
+colnames(genes)
 ```
 
 In order to asses the quality for each fit, lets calculate the $R^2$, or the percentage of variance explained for each gene from the model.
@@ -95,7 +98,7 @@ mod_q %>%
  
 ```{r}
 mod_q %>% 
-    filter(model_type == 'Full') %>% 
+    filter(model_type == 'Full' & r.squared < .4) %>% 
     arrange(r.squared)
 ```
 What makes the model week? are there any features of the genes that have low scores? $R^2$ is a general thing for all 300 data points, so its not like its pulling out massive outliers (FUS1 and HSP12 have very hight $R^2$)

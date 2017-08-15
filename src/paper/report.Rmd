@@ -1,33 +1,12 @@
 ---  
-title: My Report  
+title: An analysis of stress propagation through the kinome reveals
 output:
   pdf_document:
     toc: yes
 ---
 
-<!-- Title -->
-# An analysis of stress propagation through the kinome reveals ...
-
-## Results:
-
-
-```{r child = 'results_1.Rmd'}
+```{r child = 'results.Rmd'}
 ```
 
-```{r child = results_2.Rmd}
-```
-
-```{r child = results_3.Rmd}
-```
-
-```{r child = results_4.Rmd}
-```
-
-```{r child = results_5.Rmd}
-```
-
-```{r child = results_6.Rmd}
-```
-
-```{r child = 'Summary.Rmd'}
+```{r child = 'summary.Rmd'}
 ```
