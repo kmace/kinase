@@ -14,8 +14,6 @@
 ![f1](img/Figure_1.png)
 
 
-### Growth assays identify kinase contribution to fitness in a stress dependent manner  <!-- Push to suplement -->
-
 ### The full linear model of Condition and Stress identity accurately describes gene expression data
 
 Lets look at the $R^{2}$ for each gene
@@ -30,6 +28,9 @@ What is the R^2 for this data vs data that is row shuffled, column shuffled, or 
 ### Condition and Strain identities explain non-redundant aspects of the gene expression
 
 ![Increased R2](img/added_r2_as_last.png)
+
+What does strains give you, that conditions dont?
+break down ESR
 
 ### Model recapitulates know gene expression modules
 * Clustering of model coefficients reveal known gene expression modules
@@ -63,6 +64,12 @@ INSPIRE Cluster 36 (Contains FUS1 and other mating genes)
 
 ### Summary.
 -----------------------------------------------------------------------
+
+
+## Supplement
+
+### Growth assays identify kinase contribution to fitness in a stress dependent manner  <!-- Push to suplement -->
+
 
 ## Figure Layout:
 
