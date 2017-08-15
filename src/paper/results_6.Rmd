@@ -26,6 +26,9 @@ HSP12 Expression with direct PKA inhibition with and without PBS2
 ##### Expect to see:
 Direct PKA inhibition to produce same levels of activity, regardless of PBS2 state
 
+##### Results:
+![pbs required for HSP12 activation, and upstream of PKA](img/HSP12-GFP_tpk-as_pbs2_gluc_1NM.png)
+
 #### Claim 3: PBS2 acts at or downstream of RAS
 
 ##### Idea:
