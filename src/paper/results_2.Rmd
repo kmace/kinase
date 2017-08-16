@@ -6,7 +6,7 @@
 
 ### Building the model:
 
-```{r}
+```{r, messages = FALSE}
 rm(list=ls())
 
 load('../../input/images/normalized_data.RData')
