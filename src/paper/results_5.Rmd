@@ -2,7 +2,9 @@
 
 Lets first look at known epistatic relationships, that we know to exist in the dataset:
 
-FUS1, and AGA1
+for example: FUS1, and AGA1 should be activated when HOG1, and PBS2 are inactive in Salt.
+
+
 
 ![Salt Example](img/HOG_PBS_RESID.png)
 
