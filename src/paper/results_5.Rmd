@@ -14,96 +14,164 @@ for example: FUS1, and AGA1 should be activated when HOG1, and PBS2 are inactive
 Define clusters:
 ```{r}
 library(tidyverse)
-library(Rtsne.multicore)
+library(magrittr)
+#library(Rtsne.multicore)
+library(amap)
 
 load('../../input/images/model_parameters.RData')
 
-pca = prcomp(full)
-pca = data.frame(pca$x, Gene = rownames(pca$x))
-meta_pc = left_join(pca, t2g)
-t = Rtsne.multicore(meta_pc %>% select(starts_with('PC')), 
-                    theta = 0.1, 
-                    pca=FALSE, 
-                    num_threads = 6, 
-                    check_duplicates = FALSE)
-colnames(t$Y) = c('TSNE1', 'TSNE2')
-meta_pc = cbind(meta_pc, t$Y)
+full_shrunk = full
+full_shrunk[abs(full_shrunk)<2] = 0
+fs_dist = Dist(full_shrunk, method = "euclidean", nbproc = 20)
+#hc = hclust(fs_dist)
+#cutree(hc, h=12)
+fsd_matrix = as.matrix(fs_dist)
+fsdm_similarity = fsd_matrix<14
+diag(fsdm_similarity) = 0
 
-base_dr = do_tsne(base)
+g = graph_from_adjacency_matrix(fsdm_similarity, mode = 'undirected')
+fg = fastgreedy.community(g)
+mem = membership(fg)
+clusters = tibble(Gene = names(mem), cluster = mem)
+clusters %<>% left_join(t2g)
+cluster_location = '../../output/residual_clusters'
+dir.create(cluster_location)
 
-ggplot(base_dr, 
-       aes(x=TSNE1, y=TSNE2, color=Condition, label = Strain)) + 
-  geom_point(size=4) + 
-  geom_text_repel(size = 2, 
-                  color = 'black', 
-                  point.padding = NA, 
-                  box.padding = unit(0.01, "lines"))
+clusters %>%
+  add_count(cluster) %>%
+  filter(n > 1) %>%
+  group_by(cluster) %>% 
+  do(
+    write(pull(.,name), 
+          file = paste0(cluster_location,
+                        '/cluster_',
+                        as.character(unique(.$cluster)), 
+                        '.txt')
+          )
+    )
 
 
-t = Rtsne.multicore(full, num_threads = 10)
-t
-str(t)
-dim(full)
-dim(meta_pc)
-meta_pc = left_join(pca, t2g)
-dim(meta_pc)
-plot(t$Y[,1], t$Y[,2])
-ts - t$Y
-ts = t$Y
-m = ts
-cl = kmeans(m,30)
-colnames(ts)
-colnames(ts) = c('TSNE1', 'TSNE2')
-ts = data.frame(ts)
-ts
-rownames(full)
-ts$Gene = rownames(full)
-ts$cluster = factor(cl$cluster)
-centers = as.data.frame(cl$centers)
-library(ggplot2)
-ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = cluster)) + geom_point()
-hclust(dist(ts[,1:2]))
-cutree(hclust(dist(ts[,1:2])),30)
-ts$hcluster = factor(cutree(hclust(dist(ts[,1:2])),30))
-ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = hcluster)) + geom_point()
-ts$hcluster = factor(cutree(hclust(dist(ts[,1:2])),60))
-ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = hcluster)) + geom_point()
-ts %>% filter(hcluster == 1)
-ts %>% filter(hcluster == 1) %>% select(name)
-ts %>% filter(hcluster == 1) %>% left_join(t2g) %>% select(name)
-ts %>% filter(hcluster == 2) %>% left_join(t2g) %>% select(name)
-ts %>% filter(hcluster == 3) %>% left_join(t2g) %>% select(name)
-ts = left_join(ts,t2g)
-ts %>% filter(name='FUS1')
-ts %>% filter(name=='FUS1')
-ts %>% filter(hcluster == 10) %>% select(name)
-ts %>% filter(hcluster == 10) %>% select(name) %>% sort
-ts %>% filter(hcluster == 10) %>% select(name) %>% sort()
-ts %>% filter(hcluster == 10) %>% pull(name) %>% sort()
-ts %>% filter(cluster == 10) %>% pull(name) %>% sort()
-ts %>% filter(name=='FUS1')
-ts %>% filter(hcluster == 16) %>% pull(name) %>% sort()
-ts %>% filter(name=='AGA1')
-ts %>% filter(hcluster == 42) %>% pull(name) %>% sort()
-ts %>% filter(hcluster == 42) %>% pull(name) %>% sort() %>% write(file='test.txt')
-dist(full)
-ts %>% filter(TSNE1 < -22)
-ts %>% filter(TSNE1 < -22 & TSNE2 < -10)
-ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(cluster) %>% table()
-ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(hcluster) %>% table()
-ts %>% filter(hclust == 34)
-ts %>% filter(hcluster == 34)
-ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(hcluster)
-ts %>% filter(hcluster == 34)
-ts %>% filter(hcluster == 34) %>% pull(name)
-ts %>% filter(hcluster == 34) %>% pull(name) %>% write('test.txt')
+# 
+# 
+# pca = prcomp(full)
+# pca = data.frame(pca$x, Gene = rownames(pca$x))
+# meta_pc = left_join(pca, t2g)
+# t = Rtsne.multicore(meta_pc %>% select(starts_with('PC')), 
+#                     theta = 0.1, 
+#                     pca=FALSE, 
+#                     num_threads = 6, 
+#                     check_duplicates = FALSE)
+# colnames(t$Y) = c('TSNE1', 'TSNE2')
+# meta_pc = cbind(meta_pc, t$Y)
+# 
+# base_dr = do_tsne(base)
+# 
+# ggplot(base_dr, 
+#        aes(x=TSNE1, y=TSNE2, color=Condition, label = Strain)) + 
+#   geom_point(size=4) + 
+#   geom_text_repel(size = 2, 
+#                   color = 'black', 
+#                   point.padding = NA, 
+#                   box.padding = unit(0.01, "lines"))
+# 
+# 
+# t = Rtsne.multicore(full, num_threads = 10)
+# t
+# str(t)
+# dim(full)
+# dim(meta_pc)
+# meta_pc = left_join(pca, t2g)
+# dim(meta_pc)
+# plot(t$Y[,1], t$Y[,2])
+# ts - t$Y
+# ts = t$Y
+# m = ts
+# cl = kmeans(m,30)
+# colnames(ts)
+# colnames(ts) = c('TSNE1', 'TSNE2')
+# ts = data.frame(ts)
+# ts
+# rownames(full)
+# ts$Gene = rownames(full)
+# ts$cluster = factor(cl$cluster)
+# centers = as.data.frame(cl$centers)
+# library(ggplot2)
+# ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = cluster)) + geom_point()
+# hclust(dist(ts[,1:2]))
+# cutree(hclust(dist(ts[,1:2])),30)
+# ts$hcluster = factor(cutree(hclust(dist(ts[,1:2])),30))
+# ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = hcluster)) + geom_point()
+# ts$hcluster = factor(cutree(hclust(dist(ts[,1:2])),60))
+# ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = hcluster)) + geom_point()
+# ts %>% filter(hcluster == 1)
+# ts %>% filter(hcluster == 1) %>% select(name)
+# ts %>% filter(hcluster == 1) %>% left_join(t2g) %>% select(name)
+# ts %>% filter(hcluster == 2) %>% left_join(t2g) %>% select(name)
+# ts %>% filter(hcluster == 3) %>% left_join(t2g) %>% select(name)
+# ts = left_join(ts,t2g)
+# ts %>% filter(name='FUS1')
+# ts %>% filter(name=='FUS1')
+# ts %>% filter(hcluster == 10) %>% select(name)
+# ts %>% filter(hcluster == 10) %>% select(name) %>% sort
+# ts %>% filter(hcluster == 10) %>% select(name) %>% sort()
+# ts %>% filter(hcluster == 10) %>% pull(name) %>% sort()
+# ts %>% filter(cluster == 10) %>% pull(name) %>% sort()
+# ts %>% filter(name=='FUS1')
+# ts %>% filter(hcluster == 16) %>% pull(name) %>% sort()
+# ts %>% filter(name=='AGA1')
+# ts %>% filter(hcluster == 42) %>% pull(name) %>% sort()
+# ts %>% filter(hcluster == 42) %>% pull(name) %>% sort() %>% write(file='test.txt')
+# dist(full)
+# ts %>% filter(TSNE1 < -22)
+# ts %>% filter(TSNE1 < -22 & TSNE2 < -10)
+# ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(cluster) %>% table()
+# ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(hcluster) %>% table()
+# ts %>% filter(hclust == 34)
+# ts %>% filter(hcluster == 34)
+# ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(hcluster)
+# ts %>% filter(hcluster == 34)
+# ts %>% filter(hcluster == 34) %>% pull(name)
+# ts %>% filter(hcluster == 34) %>% pull(name) %>% write('test.txt')
 
 
 ```
 
 
+
 *  GO
 *  MEME/Scope
+
+So after running meme, lets look at two of the clusters:
+Cluster 7, that holds FUS1 and AGA1:
+
+```{r}
+this_cluster = clusters %>% filter(cluster == 7)
+knitr::kable(this_cluster)
+shiny::includeHTML("../../../memeTest/residual_clusters/cluster_7/ame.html")
+this_cluster_resid = apply(full[this_cluster$Gene,],2,mean)
+tibble(Exp = names(this_cluster_resid), val = this_cluster_resid) %>% 
+  separate(Exp, c('Condition', 'Strain'), sep = '_') %>% 
+  mutate(Condition = relevel(factor(Condition),ref = 'YPD'), 
+         Strain = relevel(factor(Strain),ref = 'WT')) %>% 
+  ggplot(aes(x=Strain,y=Condition, fill = val)) + 
+  geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+and lets pick one other randomly:
+
+```{r}
+this_cluster = clusters %>% filter(cluster == 6)
+knitr::kable(this_cluster)
+shiny::includeHTML("../../../memeTest/residual_clusters/cluster_6/ame.html")
+this_cluster_resid = apply(full[this_cluster$Gene,],2,mean)
+tibble(Exp = names(this_cluster_resid), val = this_cluster_resid) %>% 
+  separate(Exp, c('Condition', 'Strain'), sep = '_') %>% 
+  mutate(Condition = relevel(factor(Condition),ref = 'YPD'), 
+         Strain = relevel(factor(Strain),ref = 'WT')) %>% 
+  ggplot(aes(x=Strain,y=Condition, fill = val)) + 
+  geom_tile() + scale_fill_gradient2() + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
 
 ### Error modules (groups of error profiles) reveal Known classes of epistatic relationships
 <!-- Class 1 -->
