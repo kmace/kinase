@@ -1,4 +1,79 @@
 ## A strategy to identify Kinome wide signaling under stress
-![TSNE](img/tsne_base.png)
-![cell](img/Experiment_Cartoon.png)
-![f1](img/Figure_1.png)
+
+### Cartoon of experimental setup:
+
+![](img/Experiment_Cartoon.png)
+
+### full data, ordered by condition, or by kinase:
+
+#### By condition:
+
+![](img/by_condition.png)
+
+#### By Strain:
+
+![](img/by_strain.png)
+
+
+### Clustering shows kinases, and conditions form distinct groups.
+
+First lets see how the samples cluster. There are 300 samples, each with a given condition, and kinase inhibition.
+Condition is indicated with color, Kinase is indicated with text.
+
+```{r, message = FALSE}
+load('../../input/images/model_parameters.RData')
+
+#library(ggplot2)
+library(tsne)
+library(ggrepel)
+#library(dplyr)
+library(tidyverse)
+
+do_tsne = function(mat){
+  
+  mat_meta = tibble(cname = colnames(mat)) %>% 
+    separate(cname, c('Condition', 'Strain'), "_", remove = FALSE)
+  
+  pca = prcomp(t(mat))
+  pca = data.frame(pca$x, cname = rownames(pca$x))
+  meta_pc = full_join(mat_meta, pca)
+  t = tsne(meta_pc %>% select(starts_with('PC')))
+  colnames(t) = c('TSNE1', 'TSNE2')
+  meta_pc = cbind(meta_pc, t)
+  return(meta_pc)
+}
+
+base_dr = do_tsne(base)
+
+ggplot(base_dr, 
+       aes(x=TSNE1, y=TSNE2, color=Condition, label = Strain)) + 
+  geom_point(size=4) + 
+  geom_text_repel(size = 2, 
+                  color = 'black', 
+                  point.padding = NA, 
+                  box.padding = unit(0.01, "lines"))
+
+```
+
+
+We see here that performing t-SNE on the principal componenents with the default perplexity (30) forms logical clusters. We see condition specific, and kinase specific clusters. 
+
+here's a simple way to define these t-SNE clusters:
+
+```{r, echo = -1, message=FALSE}
+library(dendextend)
+dend = base_dr %>% select(starts_with('TS')) %>% dist() %>% hclust() %>% as.dendrogram
+cond = factor(sapply(colnames(base), function(x) strsplit(x,'_')[[1]][1]))
+strain = factor(sapply(colnames(base), function(x) strsplit(x,'_')[[1]][2]))
+
+the_bars = cbind(cond, strain)
+
+#ggplot(as.ggdend(dend))
+plot(dend)
+colored_bars(colors = the_bars, dend = dend, sort_by_labels_order = TRUE)
+
+
+```
+
+
+![](img/Figure_1.png)

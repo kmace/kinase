@@ -8,6 +8,98 @@ FUS1, and AGA1
 
 ### residual profiles cluster into functionally enriched modules:
 <!-- (so do the coefficients from before?) -->
+
+Define clusters:
+```{r}
+library(tidyverse)
+library(Rtsne.multicore)
+
+load('../../input/images/model_parameters.RData')
+
+pca = prcomp(full)
+pca = data.frame(pca$x, Gene = rownames(pca$x))
+meta_pc = left_join(pca, t2g)
+t = Rtsne.multicore(meta_pc %>% select(starts_with('PC')), 
+                    theta = 0.1, 
+                    pca=FALSE, 
+                    num_threads = 6, 
+                    check_duplicates = FALSE)
+colnames(t$Y) = c('TSNE1', 'TSNE2')
+meta_pc = cbind(meta_pc, t$Y)
+
+base_dr = do_tsne(base)
+
+ggplot(base_dr, 
+       aes(x=TSNE1, y=TSNE2, color=Condition, label = Strain)) + 
+  geom_point(size=4) + 
+  geom_text_repel(size = 2, 
+                  color = 'black', 
+                  point.padding = NA, 
+                  box.padding = unit(0.01, "lines"))
+
+
+t = Rtsne.multicore(full, num_threads = 10)
+t
+str(t)
+dim(full)
+dim(meta_pc)
+meta_pc = left_join(pca, t2g)
+dim(meta_pc)
+plot(t$Y[,1], t$Y[,2])
+ts - t$Y
+ts = t$Y
+m = ts
+cl = kmeans(m,30)
+colnames(ts)
+colnames(ts) = c('TSNE1', 'TSNE2')
+ts = data.frame(ts)
+ts
+rownames(full)
+ts$Gene = rownames(full)
+ts$cluster = factor(cl$cluster)
+centers = as.data.frame(cl$centers)
+library(ggplot2)
+ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = cluster)) + geom_point()
+hclust(dist(ts[,1:2]))
+cutree(hclust(dist(ts[,1:2])),30)
+ts$hcluster = factor(cutree(hclust(dist(ts[,1:2])),30))
+ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = hcluster)) + geom_point()
+ts$hcluster = factor(cutree(hclust(dist(ts[,1:2])),60))
+ggplot(data=ts, aes(x=TSNE1, y=TSNE2, color = hcluster)) + geom_point()
+ts %>% filter(hcluster == 1)
+ts %>% filter(hcluster == 1) %>% select(name)
+ts %>% filter(hcluster == 1) %>% left_join(t2g) %>% select(name)
+ts %>% filter(hcluster == 2) %>% left_join(t2g) %>% select(name)
+ts %>% filter(hcluster == 3) %>% left_join(t2g) %>% select(name)
+ts = left_join(ts,t2g)
+ts %>% filter(name='FUS1')
+ts %>% filter(name=='FUS1')
+ts %>% filter(hcluster == 10) %>% select(name)
+ts %>% filter(hcluster == 10) %>% select(name) %>% sort
+ts %>% filter(hcluster == 10) %>% select(name) %>% sort()
+ts %>% filter(hcluster == 10) %>% pull(name) %>% sort()
+ts %>% filter(cluster == 10) %>% pull(name) %>% sort()
+ts %>% filter(name=='FUS1')
+ts %>% filter(hcluster == 16) %>% pull(name) %>% sort()
+ts %>% filter(name=='AGA1')
+ts %>% filter(hcluster == 42) %>% pull(name) %>% sort()
+ts %>% filter(hcluster == 42) %>% pull(name) %>% sort() %>% write(file='test.txt')
+dist(full)
+ts %>% filter(TSNE1 < -22)
+ts %>% filter(TSNE1 < -22 & TSNE2 < -10)
+ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(cluster) %>% table()
+ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(hcluster) %>% table()
+ts %>% filter(hclust == 34)
+ts %>% filter(hcluster == 34)
+ts %>% filter(TSNE1 < -22 & TSNE2 < -10) %>% pull(hcluster)
+ts %>% filter(hcluster == 34)
+ts %>% filter(hcluster == 34) %>% pull(name)
+ts %>% filter(hcluster == 34) %>% pull(name) %>% write('test.txt')
+
+
+```
+
+
 *  GO
 *  MEME/Scope
 

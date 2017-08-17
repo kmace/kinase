@@ -1,7 +1,27 @@
 ## Condition and Strain identities explain non-redundant aspects of the gene expression
 
+To break this down, lets see how much $R^2$ we loose by removing a variable from the model:
 
-![Increased R2](img/added_r2_as_last.png)
+```{r}
+library(relaimpo)
+getri = function(mod){
+r = calc.relimp(mod, type = 'last')@last
+return(r)
+}
+
+
+out = lapply(genes$Full_model, getri)
+lasts = do.call(rbind, out)
+#colnames(lasts) = c('Strain', 'Condition')
+#pdf('')
+
+gather(as_tibble(lasts), Last_Factor, added_r2) %>% 
+  ggplot(aes(x = added_r2, fill = Last_Factor)) + 
+  geom_density(alpha = .5) + 
+  ggtitle('Additional R^2 from adding factor last', subtitle = 'Each variables contribution when included in the model last, also sometimes called usefulness')
+```
+
+
 
 What does strains give you, that conditions dont?
 break down ESR
