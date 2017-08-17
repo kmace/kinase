@@ -1,4 +1,9 @@
 ## Discrepancies in the linear model predict epistatic relationships
+
+Lets first look at known epistatic relationships, that we know to exist in the dataset:
+
+FUS1, and AGA1
+
 ![Salt Example](img/HOG_PBS_RESID.png)
 
 ### residual profiles cluster into functionally enriched modules:
