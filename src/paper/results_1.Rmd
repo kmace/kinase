@@ -77,3 +77,8 @@ colored_bars(colors = the_bars, dend = dend, sort_by_labels_order = TRUE)
 
 
 ![](img/Figure_1.png)
+
+Test 
+
+![](img/Kinase_Pipeline.png)
+
