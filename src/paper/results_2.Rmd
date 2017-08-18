@@ -93,6 +93,7 @@ mod_q %>%
     geom_density(fill='blue', alpha=.5) +
     ggtitle('Percentage of variance explained by the full model')
 ```
+ 
  Okay, so for most genes, the model does well. For what genes does it perform badly?
  
  

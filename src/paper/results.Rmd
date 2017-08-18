@@ -1,19 +1,19 @@
 # Results:
 
-```{r child = 'results_1.Rmd'}
+```{r child = 'results_1.Rmd', cache=TRUE}
 ```
 
-```{r child = 'results_2.Rmd'}
+```{r child = 'results_2.Rmd', cache=TRUE}
 ```
 
-```{r child = 'results_3.Rmd'}
+```{r child = 'results_3.Rmd', cache=TRUE}
 ```
 
-```{r child = 'results_4.Rmd'}
+```{r child = 'results_4.Rmd', cache=TRUE}
 ```
 
-```{r child = 'results_5.Rmd'}
+```{r child = 'results_5.Rmd', cache=TRUE}
 ```
 
-```{r child = 'results_6.Rmd'}
+```{r child = 'results_6.Rmd', cache=TRUE}
 ```

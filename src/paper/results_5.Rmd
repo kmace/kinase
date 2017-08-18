@@ -15,6 +15,7 @@ Define clusters:
 ```{r}
 library(tidyverse)
 library(magrittr)
+library(igraph)
 #library(Rtsne.multicore)
 library(amap)
 
