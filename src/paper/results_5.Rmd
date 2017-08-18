@@ -28,7 +28,7 @@ fs_dist = Dist(full_shrunk, method = "euclidean", nbproc = 20)
 fsd_matrix = as.matrix(fs_dist)
 fsdm_similarity = fsd_matrix<14
 diag(fsdm_similarity) = 0
-
+library(igraph)
 g = graph_from_adjacency_matrix(fsdm_similarity, mode = 'undirected')
 fg = fastgreedy.community(g)
 mem = membership(fg)
