@@ -17,6 +17,9 @@ lasts = do.call(rbind, out)
 #colnames(lasts) = c('Strain', 'Condition')
 #pdf('')
 
+# How much aditional R2 would I get by adding in a random assignment of factor size 10, or 30?
+
+
 gather(as_tibble(lasts), Last_Factor, added_r2) %>% 
   ggplot(aes(x = added_r2, fill = Last_Factor)) + 
   geom_density(alpha = .5) + 
