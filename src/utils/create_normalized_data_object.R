@@ -35,7 +35,7 @@ dds = DESeq(dds, parallel = TRUE)
 # This takes a very ling time
 vst = varianceStabilizingTransformation(dds, blind = FALSE)
 vlog = assay(vst)
-meta = colData(vst)
+meta = as.data.frame(colData(vst))
 
 # This is pretty quick
 # baseMean <- rowMeans(counts(dds, normalized=TRUE))
@@ -48,4 +48,5 @@ meta = colData(vst)
 # vlog = assay(vst)
 # meta = colData(vst)
 
-save.image('../../input/images/normalized_data.RData')
+save(file = '../../input/images/normalized_data.RData',
+     list = c('vlog', 'meta', 't2g'))
