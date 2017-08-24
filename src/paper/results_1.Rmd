@@ -1,84 +1,92 @@
 ## A strategy to identify Kinome wide signaling under stress
 
-### Cartoon of experimental setup:
+### Experimental Pipeline:
 
 ![](img/Experiment_Cartoon.png)
 
-### full data, ordered by condition, or by kinase:
+### Analysis Pipeline:
 
-#### By condition:
+#### Load Data:
+
+Data is aligned with STAR, and then expression levels are normailzed using DESeq's variance stabalizing transformation. It is then loaded in for analysis.
+
+```{r, ref.label=data_loading, eval=FALSE}
+```
+
+#### Calculation of statistics, and filtering:
+
+We then calculate basic statistics on the gene expression data:
+
+```{r ref.label=gene_statistics, eval=FALSE}
+```
+
+Genes with no variability will be problematic in downstream analysis. As we can infer very little about these genes, it is apprpriate to filter them out. We will arbitrarily filter out genes whos dynamic range is less than 1 in all the samples
+
+```{r ref.label=gene_filter, eval=FALSE}
+```
+
+
+### Full dataset heatmap
+
+#### Ordered by condition:
 
 ![](img/by_condition.png)
 
-#### By Strain:
+#### Ordered by kinase:
 
 ![](img/by_strain.png)
 
 
-### Clustering shows kinases, and conditions form distinct groups.
+### Clustering of samples shows distinct kinases, and condition groups.
 
-First lets see how the samples cluster. There are 300 samples, each with a given condition, and kinase inhibition.
-Condition is indicated with color, Kinase is indicated with text.
+There are 300 samples, each with an applied condition, kinase inhibition, and a gene expression vector. Here, we cluster the samples by performming t-SNE on gene expression vectors with default t-SNE parameters
 
-```{r, message = FALSE}
-load('../../input/images/model_parameters.RData')
 
-#library(ggplot2)
-library(tsne)
+```{r ref.label='tsne_cluster', eval=FALSE}
+```
+
+
+When plotting the gene expression vectors in t-SNE space, we see that the samples cluster into distinct kinase, and condition clusters:
+
+```{r test, message = FALSE}
 library(ggrepel)
-#library(dplyr)
-library(tidyverse)
 
-do_tsne = function(mat){
-  
-  mat_meta = tibble(cname = colnames(mat)) %>% 
-    separate(cname, c('Condition', 'Strain'), "_", remove = FALSE)
-  
-  pca = prcomp(t(mat))
-  pca = data.frame(pca$x, cname = rownames(pca$x))
-  meta_pc = full_join(mat_meta, pca)
-  t = tsne(meta_pc %>% select(starts_with('PC')))
-  colnames(t) = c('TSNE1', 'TSNE2')
-  meta_pc = cbind(meta_pc, t)
-  return(meta_pc)
-}
-
-base_dr = do_tsne(base)
-
-ggplot(base_dr, 
-       aes(x=TSNE1, y=TSNE2, color=Condition, label = Strain)) + 
-  geom_point(size=4) + 
-  geom_text_repel(size = 2, 
-                  color = 'black', 
-                  point.padding = NA, 
+ggplot(sample_tsne,
+       aes(x=TSNE1, 
+           y=TSNE2, 
+           color = Condition, 
+           label = Strain)) +
+  geom_point(size=4) +
+  geom_text_repel(size = 2,
+                  color = 'black',
+                  point.padding = NA,
                   box.padding = unit(0.01, "lines"))
 
 ```
 
 
-We see here that performing t-SNE on the principal componenents with the default perplexity (30) forms logical clusters. We see condition specific, and kinase specific clusters. 
-
-here's a simple way to define these t-SNE clusters:
+heirarchically clustering the t-SNE projections:
 
 ```{r, echo = -1, message=FALSE}
 library(dendextend)
-dend = base_dr %>% select(starts_with('TS')) %>% dist() %>% hclust() %>% as.dendrogram
-cond = factor(sapply(colnames(base), function(x) strsplit(x,'_')[[1]][1]))
-strain = factor(sapply(colnames(base), function(x) strsplit(x,'_')[[1]][2]))
 
-the_bars = cbind(cond, strain)
+dend = sample_tsne %>% 
+  select(starts_with('TSNE')) %>% # Select the TSNE variables 
+  dist() %>% # Euclidean distance
+  hclust() %>% # Heirarchical Clustering
+  as.dendrogram()
 
-#ggplot(as.ggdend(dend))
+the_bars = cbind(factor(sample_tsne$Condition), 
+                 factor(sample_tsne$Strain))
+
 plot(dend)
-colored_bars(colors = the_bars, dend = dend, sort_by_labels_order = TRUE)
-
+colored_bars(colors = the_bars, 
+             dend = dend, 
+             sort_by_labels_order = TRUE)
 
 ```
 
 
-![](img/Figure_1.png)
-
-Test 
 
 ![](img/Kinase_Pipeline.png)
 

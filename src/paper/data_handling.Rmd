@@ -1,0 +1,169 @@
+---
+title: "Data Processing"
+output: html_notebook
+---
+
+This notebook takes us from the DESeq2 normalized data, to all the data that is used for plotting in the paper.
+
+```{r data_loading}
+
+rm(list=ls())
+
+load('../../input/images/normalized_data.RData')
+
+library(tidyr)
+library(purrr)
+library(dplyr)
+library(broom)
+library(tibble)
+
+genes = rownames(vlog)
+vlog = as_tibble(vlog)
+vlog$Gene = genes
+measurements = gather(vlog, Sample_Name, Expression, -Gene)
+
+rm(genes, vlog)
+
+meta = as_tibble(meta)
+
+colnames(t2g)[1] = 'Gene'
+t2g = as_tibble(t2g)
+
+# should be a left join on the meta subsetted
+meta_sub = meta %>% select(Sample_Name, Condition, Strain)
+
+measurements = left_join(measurements, meta_sub)
+
+```
+
+Next lets calculate some base statistics:
+
+```{r gene_statistics}
+genes = measurements %>%
+  group_by(Gene) %>%
+  mutate(Gene_range = diff(range(Expression)),
+         Gene_sd = sd(Expression),
+         Gene_mean = mean(Expression),
+         Differential_Expression = Expression - Gene_mean,
+         Norm_Differential_Expression = Differential_Expression / Gene_sd)
+```
+
+
+```{r gene_filter}
+genes = genes %>% filter(Gene_range > 1)
+```
+
+
+
+Next lets do some basic clustering on the Differential Expression:
+
+```{r tsne_cluster}
+library(tsne)
+
+do_tsne = function(mat){
+  
+  mat_meta = tibble(sample = colnames(mat)) %>% 
+    separate(sample, c('Condition', 'Strain'), "_", remove = FALSE)
+  
+  pca = prcomp(t(mat))
+  pca = data.frame(pca$x, sample = rownames(pca$x))
+  meta_pc = full_join(mat_meta, pca)
+  t = tsne(meta_pc %>% select(starts_with('PC')))
+  colnames(t) = c('TSNE1', 'TSNE2')
+  meta_pc = cbind(meta_pc, t)
+  return(meta_pc)
+}
+
+gene_matrix = genes %>% 
+  select(Gene, Condition, Strain, Differential_Expression) %>%
+  unite(sample, c(Condition, Strain), remove = TRUE) %>% 
+  group_by(Gene, sample) %>%
+  summarise(Differential_Expression = mean(Differential_Expression)) %>% # median would be better
+  ungroup() %>%
+  spread(sample, Differential_Expression)
+
+sample_tsne = do_tsne(gene_matrix %>% select(-Gene))
+
+```
+
+
+create the 4 linear models:
+
+```{r create_linear_models}
+
+lin_mod = function(formula) {
+  function(data, ...){
+    map(data, ~ lm(formula, data = .))
+  }
+}
+
+list_model <- list(Strain_model = Expression ~ Strain,
+                   Condition_model = Expression ~ Condition,
+                   Full_model = Expression ~ Strain + Condition,
+                   Base_model = Expression ~ 1) %>%
+  lapply(lin_mod)
+
+
+models = genes %>%
+  nest() %>%
+  mutate_at(.vars=("data"),.funs=list_model) 
+
+```
+
+Now lets look at model quality on a per gene basis:
+
+```{r model_quality}
+model_quality = models %>%
+  select(Gene, data, ends_with('model')) %>%
+  mutate_at(.vars=vars(ends_with('model')), 
+            .funs = funs(glance = map(.,glance))) %>%
+  select(Gene, ends_with('glance')) %>%
+  gather(model_type, model_data, -Gene) %>% 
+  mutate(model_type = map(model_type, function(x) strsplit(x,'_')[[1]][1])) %>% 
+  unnest()
+```
+
+
+Now lets extract the residuals for each model into it's own wide matrix, for repeats (4 X Wild Type. lets take the median residual)
+
+```{r extract_residuals}
+std_residuals = models %>%
+  mutate_at(.vars=vars(ends_with('model')), 
+            .funs = funs(aug = map(.,augment))) %>%
+  mutate_at(.vars=vars(ends_with('aug')), 
+            .funs = funs(std_resid = map(.,'.std.resid'), 
+                         raw_resid=map(.,'.resid'))) %>%
+  select(Gene, data, ends_with('std_resid')) %>%
+  unnest() %>%
+  group_by(Strain, Gene, Condition) %>%
+  # should only apply to WT
+  summarize_at(.vars=vars(ends_with('resid')), mean) %>%
+  ungroup() %>%
+  mutate(sample_id = paste(Condition,Strain, sep = '_')) %>%
+  select(Gene, sample_id, ends_with('resid')) %>%
+  rename(Strain = Strain_model_aug_std_resid,
+         Condition = Condition_model_aug_std_resid,
+         Full = Full_model_aug_std_resid,
+         Base = Base_model_aug_std_resid) %>%
+  gather(residual_type, residual, -sample_id, -Gene)
+
+get_matrix = function(data, type='Strain'){
+  cm = data %>%
+    filter(residual_type == type) %>%
+    select(-residual_type) %>%
+    spread(key = sample_id, value = residual, drop=TRUE)
+  rownames(cm) = cm$Gene
+  cm  = as.matrix(select(cm, -Gene))
+  return(cm)
+}
+
+base_std_resid_matrix = get_matrix(std_residuals, type='Base')
+strain_std_resid_matrix = get_matrix(std_residuals, type='Strain')
+condition_std_resid_matrix = get_matrix(std_residuals, type='Condition')
+full_std_resid_matrix = get_matrix(std_residuals, type='Full')
+
+```
+```{r data_saving}
+save.image('../../input/images/paper_data.RData')
+```
+

@@ -6,57 +6,7 @@
 
 ### Building the model:
 
-```{r, messages = FALSE}
-rm(list=ls())
-
-load('../../input/images/normalized_data.RData')
-
-library(tidyr)
-library(purrr)
-library(dplyr)
-library(broom)
-library(purrr)
-library(tibble)
-library(heatmap3)
-library(ggplot2)
-#library(magrittr)
-#library(multidplyr)
-
-#vlog = vlog - rowMeans(vlog)
-#row_sd = apply(vlog,1,sd)
-#vlog = apply(vlog,2,function(x) x / row_sd)
-
-vlog = as.data.frame(vlog)
-vlog$Gene = rownames(vlog)
-measurements = gather(vlog, Sample_Name, Expression, -Gene)
-#measurements %<>% as_tibble()
-
-# should be a left join on the meta subsetted
-meta_sub = as.data.frame(meta) %>% select(Sample_Name, Condition, Strain)
-
-measurements = left_join(measurements, meta_sub)
-
-lin_mod = function(formula) {
-  function(data, ...){
-    map(data, ~ lm(formula, data = .))
-  }
-}
-
-list_model <- list(Strain_model = Expression ~ Strain,
-                   Condition_model = Expression ~ Condition,
-                   Full_model = Expression ~ Strain + Condition,
-                   Base_model = Expression ~ 1) %>%
-  lapply(lin_mod)
-
-genes = measurements %>%
-  group_by(Gene) %>%
-  mutate(Gene_range = diff(range(Expression)),
-         Gene_sd = sd(Expression),
-         Gene_mean = mean(Expression),
-         Norm_Expression = (Expression - Gene_mean) / Gene_sd) %>%
-  filter(Gene_range > 1) %>%
-  nest() %>%
-  mutate_at(.vars=("data"),.funs=list_model)
+```{r, eval = FALSE}
 
 ```
 So we've built a model for each gene. lets quickly look at the data frame 
@@ -102,6 +52,65 @@ mod_q %>%
     filter(model_type == 'Full' & r.squared < .4) %>% 
     arrange(r.squared)
 ```
+Lets look at an example of strong and week performace:
+
+```{r}
+library(stringr)
+
+library(tidyr)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library(gridExtra)
+library(RGraphics)
+library(ggrepel)
+
+expression_plot = funciton(data){
+  
+}
+
+residual_plot = function(gene, all) {
+  dat = all %>% dplyr::filter(name == gene) %>% unnest()
+
+  p_heatmap1 = ggplot(dat, aes(x = Strain, y = Condition, fill = Base_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ 1")
+
+  p_heatmap2 = ggplot(dat, aes(x = Strain, y = Condition, fill = Strain_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Strain")
+
+  p_heatmap3 = ggplot(dat, aes(x = Strain, y = Condition, fill = Condition_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Condition")
+
+  p_heatmap4 = ggplot(dat, aes(x = Strain, y = Condition, fill = Full_model_aug_resid)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Strain + Condtion")
+
+
+
+  grid.arrange(p_heatmap1, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+               p_heatmap2, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+               p_heatmap3, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+               p_heatmap4) #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()))
+}
+residual_plot('ATP8', genes)
+```
+
+
 What makes the model week? are there any features of the genes that have low scores? $R^2$ is a general thing for all 300 data points, so its not like its pulling out massive outliers (FUS1 and HSP12 have very hight $R^2$)
 
 Proving that this model is actually performing well:
