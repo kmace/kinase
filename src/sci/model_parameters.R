@@ -84,7 +84,7 @@ condition = get_matrix(res_matrix, type='Condition')
 full = get_matrix(res_matrix, type='Full')
 
 
-colnames(t2g)[1] = 'Gene'
+
 
 genes = left_join(genes, t2g)
 save.image('../../input/images/model_parameters.RData')
