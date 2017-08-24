@@ -3,12 +3,14 @@
 To break this down, lets see how much $R^2$ we loose by removing a variable from the model:
 
 ```{r}
+library(tidyverse)
 library(relaimpo)
 getri = function(mod){
 r = calc.relimp(mod, type = 'last')@last
 return(r)
 }
 
+load('../../input/images/model_parameters.RData')
 
 out = lapply(genes$Full_model, getri)
 lasts = do.call(rbind, out)
