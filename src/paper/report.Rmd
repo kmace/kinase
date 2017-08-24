@@ -1,12 +1,27 @@
 ---  
-title: An analysis of stress propagation through the kinome reveals
+title: "An analysis of stress propagation through the kinome reveals"
 output:
+  html_document:
+    toc: yes
   pdf_document:
     toc: yes
 ---
 
-```{r child = 'results.Rmd'}
+```{r}
+library(knitr)
+opts_knit$set(root.dir = '/home/kieran/thesis/kinase/src/paper/')
+invisible(purl("data_handling.Rmd", output="temp", quiet=TRUE))
+read_chunk("temp")
 ```
 
-```{r child = 'summary.Rmd'}
+
+```{r results, child = 'results.Rmd'}
 ```
+
+```{r summary, child = 'summary.Rmd'}
+```
+
+```{r}
+unlink('temp')
+```
+
