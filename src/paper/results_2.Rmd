@@ -124,9 +124,7 @@ model_quality %>% left_join(t2g) %>%
     arrange(r.squared) %>% head(5) %>% knitr::kable(caption = 'Worst Models')
 ```
 
-Lets take a look at NAT3
-
-\newpage
+Lets take a look at NAT3:
 
 \blandscape
 
@@ -151,9 +149,8 @@ model_quality %>% left_join(t2g) %>%
     arrange(-r.squared) %>% head(5) %>% knitr::kable(caption = 'Best Models')
 ```
 
-Lets take a look at HBN1
+Lets take a look at HBN1:
 
-\newpage
 
 \blandscape
 

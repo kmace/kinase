@@ -1,12 +1,12 @@
 ---  
 title: "An analysis of stress propagation through the kinome reveals"
-author: 'Kieran Mace'
+author: "Kieran Mace"
 output:
-  pdf_document:
+  html_document:
     toc: yes
+  pdf_document:
     includes:
       in_header: header.tex
-  html_document:
     toc: yes
 ---
 
