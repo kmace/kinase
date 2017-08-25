@@ -193,3 +193,32 @@ full_std_resid_matrix = get_matrix(std_residuals, type='Full')
 save.image('../../input/images/paper_data.RData')
 ```
 
+```{r relative_importance}
+library(relaimpo)
+getri = function(mod){
+r = calc.relimp(mod, type = c('last'))@last
+return(r)
+}
+lasts = do.call(rbind, lapply(models$Full_model, getri))
+```
+
+```{r get_weights}
+weights = models %>% 
+  select(Gene, data, Strain_model) %>% 
+  mutate(weights = Strain_model %>% map(tidy)) %>% 
+  select(Gene, weights) %>% 
+  unnest() %>% 
+  select(Gene, term, estimate) %>% 
+  spread(key = term,value = estimate)
+
+w_mat = as.matrix(weights %>% select(-Gene))
+#d = 1 - cor(t(w_mat))
+d = as.matrix(dist(w_mat))
+rownames(d) = weights$Gene
+colnames(d) = weights$Gene
+h = hclust(as.dist(d))
+clus = cutree(h,k=30)
+clus = tibble(Gene = names(clus), cluster = clus)
+clus = left_join(clus, t2g)
+```
+
