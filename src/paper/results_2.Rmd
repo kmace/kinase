@@ -153,10 +153,9 @@ Lets take a look at HBN1
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 expression_plot('HBN1', measurements, t2g)
 ```
-\elandscape
 
 \newpage
-\blandscape
+
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 residual_plot('HBN1', std_residuals, t2g)
 ```

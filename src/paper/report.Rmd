@@ -1,5 +1,6 @@
 ---  
 title: "An analysis of stress propagation through the kinome reveals"
+author: 'Kieran Mace'
 output:
   pdf_document:
     toc: yes
