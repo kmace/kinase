@@ -1,6 +1,6 @@
 # Results:
 
-```{r results_setup, echo=FALSE}
+```{r results_setup, echo=FALSE, message=FALSE}
 library(tidyverse)
 load('../../input/images/paper_data.RData')
 ```
@@ -11,14 +11,14 @@ load('../../input/images/paper_data.RData')
 ```{r child = 'results_2.Rmd', cache=TRUE}
 ```
 
-#```{r child = 'results_3.Rmd', cache=TRUE}
-#```
-# 
-# ```{r child = 'results_4.Rmd', cache=TRUE}
-# ```
-# 
-# ```{r child = 'results_5.Rmd', cache=TRUE}
-# ```
-# 
+```{r child = 'results_3.Rmd', cache=TRUE}
+```
+ 
+```{r child = 'results_4.Rmd', cache=TRUE}
+```
+ 
+```{r child = 'results_5.Rmd', cache=TRUE}
+```
+ 
 ```{r child = 'results_6.Rmd', cache=TRUE}
 ```

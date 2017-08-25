@@ -29,6 +29,8 @@ Genes with no variability will be problematic in downstream analysis. As we can 
 
 ### Full dataset heatmap
 
+Here we show the raw expression data, ordered by condition, or kinase
+
 #### Ordered by condition:
 
 ![](img/by_condition.png)
@@ -49,9 +51,9 @@ There are 300 samples, each with an applied condition, kinase inhibition, and a 
 
 When plotting the gene expression vectors in t-SNE space, we see that the samples cluster into distinct kinase, and condition clusters:
 
-```{r, message = FALSE}
+```{r, message = FALSE, fig.width=12, fig.height=10}
 library(ggrepel)
-
+select = dplyr::select
 ggplot(sample_tsne,
        aes(x=TSNE1, 
            y=TSNE2, 
@@ -66,26 +68,26 @@ ggplot(sample_tsne,
 ```
 
 
-heirarchically clustering the t-SNE projections:
+<!-- heirarchically clustering the t-SNE projections: -->
 
-```{r, echo = -1, message=FALSE}
-library(dendextend)
-
-dend = sample_tsne %>% 
-  select(starts_with('TSNE')) %>% # Select the TSNE variables 
-  dist() %>% # Euclidean distance
-  hclust() %>% # Heirarchical Clustering
-  as.dendrogram()
-
-the_bars = cbind(factor(sample_tsne$Condition), 
-                 factor(sample_tsne$Strain))
-
-plot(dend)
-colored_bars(colors = the_bars, 
-             dend = dend, 
-             sort_by_labels_order = TRUE)
-
-```
+<!-- ```{r, echo = -1, message=FALSE} -->
+<!-- # library(dendextend) -->
+<!-- # -->
+<!-- # dend = sample_tsne %>% -->
+<!-- #   select(starts_with('TSNE')) %>% # Select the TSNE variables -->
+<!-- #   dist() %>% # Euclidean distance -->
+<!-- #   hclust() %>% # Heirarchical Clustering -->
+<!-- #   as.dendrogram() -->
+<!-- # -->
+<!-- # the_bars = cbind(factor(sample_tsne$Condition), -->
+<!-- #                  factor(sample_tsne$Strain)) -->
+<!-- # -->
+<!-- # plot(dend) -->
+<!-- # colored_bars(colors = the_bars, -->
+<!-- #              dend = dend, -->
+<!-- #              sort_by_labels_order = TRUE) -->
+<!-- # -->
+<!-- ``` -->
 
 
 

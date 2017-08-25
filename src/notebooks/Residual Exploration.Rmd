@@ -84,6 +84,8 @@ plotly::ggplotly(p)
 
 Okay enough of that now, lets look at some clusters that we generated with INSPIRE:
 
+These clusters were actually generated from orthogonal data (gasch, and pronk datasets)
+
 I happen to know that FUS1 cluster is cluster 36 in this dataset
 ```{r}
 clusters = read.csv('../sci/clusters.csv')

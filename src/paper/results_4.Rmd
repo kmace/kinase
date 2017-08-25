@@ -2,5 +2,6 @@
 * Clustering of model coefficients reveal known gene expression modules
 * Promoter Motifs
 * Clusters in INSPIRE
+* Identification of Kinase TF interactions.
 
-### Identification of Kinase TF interactions.
+This section is missing

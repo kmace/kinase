@@ -1,22 +1,22 @@
 ## The full linear model of Condition and Stress identity accurately describes gene expression data
 (or at least for most genes)
 
+#### I hope to show that:
+
 1. What's happening: I'm going to build the linear model
 2. I'm going to show that it has good performance over most genes. 
 
 ### Building the models:
 
-For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibiiton). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condiiton, and from the kinase.  For example:
+For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibiiton). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condition, and from the kinase.  For example:
 
-for a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2)
+For a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2), or
+
+$$\Delta E_g \approx C_g + K_g$$
+Where $\Delta E$ is the change in log expression, and $C$ and $K$ are the contributions from the condition and kinase respectivly. 
+
 
 ```{r ref.label='create_linear_models', eval = FALSE}
-```
-So we've built a model for each gene. lets quickly look at the data frame 
-
-
-```{r}
-colnames(genes)
 ```
 
 In order to asses the quality for each fit, lets calculate the $R^2$, or the percentage of variance explained for each gene from the model.
@@ -117,7 +117,7 @@ residual_plot = function(gene, all, t2g) {
 ```
 
  
-```{r}
+```{r, warning=FALSE, message=FALSE}
 model_quality %>% left_join(t2g) %>%
     filter(model_type == 'Full') %>%
     select(Gene, name, r.squared) %>% 
@@ -142,7 +142,7 @@ residual_plot('NAT3', std_residuals, t2g)
 
 \newpage
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 model_quality %>% left_join(t2g) %>%
     filter(model_type == 'Full') %>%
     select(Gene, name, r.squared) %>% 
@@ -170,10 +170,9 @@ residual_plot('HBN1', std_residuals, t2g)
 
 
 
-What makes the model week? for very low scores (<.4) we generally see taht this is dominated by genes with low expression values. 
+What makes the model weak? for very low scores (<.3) we generally see that this is dominated by genes with low expression values. 
 
-But are there any __features__ of the genes that have low scores? $R^2$ is a general thing for all 300 data points, so its not like its pulling out massive outliers (FUS1 and HSP12 have very hight $R^2$)
+For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistatsis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence. 
 
-Proving that this model is actually performing well:
-
-What is the R^2 for this data vs data that is row shuffled, column shuffled, or completely shuffled?
+Potential way to prove that this model is actually performing well:
+What is the distribution of R^2 for row shuffled, column shuffled, or completely shuffled inputs?
