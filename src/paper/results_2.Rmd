@@ -123,19 +123,23 @@ model_quality %>% left_join(t2g) %>%
     select(Gene, name, r.squared) %>% 
     arrange(r.squared) %>% head(5) %>% knitr::kable(caption = 'Worst Models')
 ```
+
 Lets take a look at NAT3
+
 \newpage
+
 \blandscape
+
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 expression_plot('NAT3', measurements, t2g)
 ```
-
 
 \newpage
 
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 residual_plot('NAT3', std_residuals, t2g)
 ```
+
 \elandscape
 
 \newpage
@@ -146,10 +150,13 @@ model_quality %>% left_join(t2g) %>%
     select(Gene, name, r.squared) %>% 
     arrange(-r.squared) %>% head(5) %>% knitr::kable(caption = 'Best Models')
 ```
+
 Lets take a look at HBN1
 
 \newpage
+
 \blandscape
+
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 expression_plot('HBN1', measurements, t2g)
 ```
@@ -159,6 +166,7 @@ expression_plot('HBN1', measurements, t2g)
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 residual_plot('HBN1', std_residuals, t2g)
 ```
+
 \elandscape
 
 \newpage
