@@ -35,7 +35,7 @@ Close enough!
 
 ### Using residual size to predict epistasis
 
-We extract measurements that have the largetst residuals, and look at the experimental conditions that produced them. lets take a look at the top ones:
+We extract measurements that have the largest residuals, and look at the experimental conditions that produced them. lets take a look at the top ones:
 
 ```{r, warning=FALSE, message=FALSE}
 std_residuals %>%
@@ -48,7 +48,7 @@ std_residuals %>%
 knitr::kable(hypotheses[1:15,], caption = 'The most significant residuals')
 ```
 
-This table is availble as a supplemental table saved here:
+This table is available as a supplemental table saved here:
 
 ```{r}
 write.csv(hypotheses, file = 'hypotheses.csv')
@@ -71,13 +71,13 @@ hypotheses %>%
 
 #### Some quick observations here:
 * Kinases in the same pathway cluster together:
-    + SLT2 and PKC are very closly clustered!
-    + PBS2 and HOG1 are very closly clutered!
+    + SLT2 and PKC are very closely clustered!
+    + PBS2 and HOG1 are very closely clustered!
 * SCH9 Seems to have an effect, but only in YPD?
 
 #### Diving into a some examples
 
-Okay, so if the findings above are true, we should see that the residuals between PBS2, and HOG1 to corrolate for genes that have significant residuals. lets check that now:
+Okay, so if the findings above are true, we should see that the residuals between PBS2, and HOG1 to correlate for genes that have significant residuals. lets check that now:
 
 ```{r, warning=FALSE}
 p = hypotheses %>% 
@@ -92,7 +92,7 @@ plotly::ggplotly(p, width = 880)
 
 Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals. They do for Salt, but do not for Menadione, and Glucose Dropout. This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions. 
 
-I dont know much about SLT2, and PCK1, other than they are in the same pathway. Lets take a look at them. (residual cutoff at 2)
+I don't know much about SLT2, and PCK1, other than they are in the same pathway. Lets take a look at them. (residual cutoff at 2)
 
 ```{r, warning=FALSE}
 p = hypotheses %>% 
@@ -107,11 +107,11 @@ plotly::ggplotly(p, width = 880)
 
 #### Expanding single gene analysis to gene modules
 
-Here we build up residual paturns from a single gene to a module.
+Here we build up residual patterns from a single gene to a module.
 
 As an example, we are going to look into the mating pathway. The mating pathway shares a kinase with the HOG pathway (STE11). It is known that mating pathway genes are not expressed during salt stress, and that their repression is due to the activity of the HOG pathway.
 
-We see this phenominon in our data:
+We see this phenomenon in our data:
 
 
 ```{r}
@@ -132,14 +132,14 @@ hypotheses %>%
 ```
 
 
-Although we do not have replicates of these residuals, we can become more confident in our prediciton if we see a similar patturn in the whole mating pathway. 
+Although we do not have replicates of these residuals, we can become more confident in our prediction if we see a similar pattern in the whole mating pathway. 
 
 To define a pathway, we use INSPIRE to cluster genes using other datatsets.
 
 These clusters were actually generated from orthogonal data (gasch, and pronk datasets)
 NB: for this data I actually also include my data... need to fix
 
-I happen to know that FUS1 cluster is cluster 36 in this dataset, which I hope will exhibit the same residual patturn (activated in Salt, when PBS2, or HOG1 are inactive)
+I happen to know that FUS1 cluster is cluster 36 in this dataset, which I hope will exhibit the same residual pattern (activated in Salt, when PBS2, or HOG1 are inactive)
 
 ```{r}
 clusters_inspire = read.csv('../../input/clusters/INSPIRE_clusters/all_clusters.csv')
@@ -153,7 +153,7 @@ hypotheses %>%
 
 ```
 
-And it does. Although we do not have repliactes for FUS1, if we average the residuals for the __module__ where FUS1 was included we get a robust residual patturn.
+And it does. Although we do not have replicates for FUS1, if we average the residuals for the __module__ where FUS1 was included we get a robust residual pattern.
 
 
 Lets see if there are meaningful go terms and motifs for this cluster:
@@ -197,7 +197,7 @@ print_out_terms(g)
 
 
 <!-- ### Error modules (groups of error profiles) reveal Known classes of epistatic relationships -->
-<!-- <!-- Class 1 --> -->
+<!-- <!-- Class 1 -->
 <!-- The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.   -->
 
 <!-- 1. If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair   -->
@@ -205,3 +205,4 @@ print_out_terms(g)
 <!-- 2. If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response) -->
 <!-- 	  * Mating pathway   -->
 
+\newpage

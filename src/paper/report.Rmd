@@ -1,12 +1,14 @@
 ---  
-title: "An analysis of stress propagation through the kinome reveals"
+title: An analysis of stress propagation through the kinome reveals novel pathway
+  interactions
 author: "Kieran Mace"
 output:
-  html_document:
-    toc: yes
   pdf_document:
     includes:
       in_header: header.tex
+    toc: yes
+  html_document:
+    self_contained: yes
     toc: yes
 ---
 

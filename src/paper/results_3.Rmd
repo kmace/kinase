@@ -1,5 +1,5 @@
 ## Condition and Strain identities explain non-redundant aspects of the gene expression
-Since a kinase inhibition is a much more targeted puruturbation compared to a stress, we should ask how much information is in each contribution. 
+Since a kinase inhibition is a much more targeted perturbation compared to a stress, we should ask how much information is in each contribution. 
 
 To break this down, lets see how much $R^2$ we loose by removing a variable from the model:
 
@@ -20,3 +20,5 @@ gather(as_tibble(lasts), Last_Factor, added_r2) %>%
 
 <!-- What does strains give you, that conditions dont? -->
 <!-- break down ESR -->
+
+\newpage

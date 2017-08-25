@@ -8,12 +8,12 @@
 
 ### Building the models:
 
-For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibiiton). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condition, and from the kinase.  For example:
+For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibition). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condition, and from the kinase.  For example:
 
 For a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2), or
 
 $$\Delta E_g \approx C_g + K_g$$
-Where $\Delta E$ is the change in log expression, and $C$ and $K$ are the contributions from the condition and kinase respectivly. 
+Where $\Delta E$ is the change in log expression, and $C$ and $K$ are the contributions from the condition and kinase respectively. 
 
 
 ```{r ref.label='create_linear_models', eval = FALSE}
@@ -36,7 +36,7 @@ model_quality %>%
  
  Okay, so for most genes, the model does well. For what genes does it perform badly?
  
-Lets look at an example of strong and week performace:
+Lets look at an example of strong and week performance:
 
 ```{r, echo=FALSE}
 library(stringr)
@@ -132,8 +132,6 @@ Lets take a look at NAT3:
 expression_plot('NAT3', measurements, t2g)
 ```
 
-\newpage
-
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 residual_plot('NAT3', std_residuals, t2g)
 ```
@@ -158,7 +156,6 @@ Lets take a look at HBN1:
 expression_plot('HBN1', measurements, t2g)
 ```
 
-\newpage
 
 ```{r, fig.width=11, fig.height=8, echo=FALSE}
 residual_plot('HBN1', std_residuals, t2g)
@@ -168,11 +165,28 @@ residual_plot('HBN1', std_residuals, t2g)
 
 \newpage
 
+Lastly, lets take a look at HSP12:
+
+\blandscape
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+expression_plot('HSP12', measurements, t2g)
+```
+
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+residual_plot('HSP12', std_residuals, t2g)
+```
+
+\elandscape
+
 
 
 What makes the model weak? for very low scores (<.3) we generally see that this is dominated by genes with low expression values. 
 
-For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistatsis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence. 
+For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistasis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence. 
 
 Potential way to prove that this model is actually performing well:
 What is the distribution of R^2 for row shuffled, column shuffled, or completely shuffled inputs?
+
+\newpage
