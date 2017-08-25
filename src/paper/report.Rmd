@@ -9,16 +9,16 @@ output:
 
 ```{r}
 library(knitr)
-opts_knit$set(root.dir = '/home/kieran/thesis/kinase/src/paper/')
+#opts_knit$set(root.dir = '/home/kieran/thesis/kinase/src/paper/')
 invisible(purl("data_handling.Rmd", output="temp", quiet=TRUE))
 read_chunk("temp")
 ```
 
 
-```{r results, child = 'results.Rmd'}
+```{r, child = 'results.Rmd'}
 ```
 
-```{r summary, child = 'summary.Rmd'}
+```{r, child = 'summary.Rmd'}
 ```
 
 ```{r}

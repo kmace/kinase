@@ -4,41 +4,31 @@
 1. What's happening: I'm going to build the linear model
 2. I'm going to show that it has good performance over most genes. 
 
-### Building the model:
+### Building the models:
 
-```{r, eval = FALSE}
+For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibiiton). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condiiton, and from the kinase.  For example:
 
+for a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2)
+
+```{r ref.label='create_linear_models', eval = FALSE}
 ```
 So we've built a model for each gene. lets quickly look at the data frame 
 
 
 ```{r}
-colnames(t2g)[1] = 'Gene'
-genes = genes %>% left_join(t2g)
-#knitr::kable(head(genes,100))
 colnames(genes)
 ```
 
 In order to asses the quality for each fit, lets calculate the $R^2$, or the percentage of variance explained for each gene from the model.
 
-```{r}
-mod_q = genes %>%
-  select(Gene, name, data, ends_with('model')) %>%
-  mutate_at(.vars=vars(ends_with('model')), 
-            .funs = funs(glance = map(.,glance))) %>%
-  select(Gene, name, ends_with('glance')) %>%
-  gather(model_type, model_data, -Gene, -name) %>% 
-  mutate(model_type = map(model_type, function(x) strsplit(x,'_')[[1]][1])) %>% 
-  unnest()
-
-head(mod_q)
+```{r ref.label= 'model_quality', eval=FALSE}
 ```
 
 Lets look at the $R^{2}$ for each gene in the full model:
 
 ```{r}
-mod_q %>% 
-    filter(model_type == 'Full') %>% 
+model_quality %>% 
+    filter(model_type == 'Full') %>% # Both kinase, and condition are taken into account 
     ggplot(aes(x=r.squared)) + 
     geom_density(fill='blue', alpha=.5) +
     ggtitle('Percentage of variance explained by the full model')
@@ -48,52 +38,75 @@ mod_q %>%
  
  
 ```{r}
-mod_q %>% 
-    filter(model_type == 'Full' & r.squared < .4) %>% 
-    arrange(r.squared)
+model_quality %>% 
+    filter(model_type == 'Full') %>%
+    select(Gene, name, r.squared) %>% 
+    arrange(r.squared) %>% head()
 ```
 Lets look at an example of strong and week performace:
 
-```{r}
+```{r, echo=FALSE}
 library(stringr)
-
-library(tidyr)
-library(dplyr)
-library(tibble)
-library(ggplot2)
 library(gridExtra)
 library(RGraphics)
 library(ggrepel)
 
-expression_plot = funciton(data){
-  
+expression_plot = function(gene, measurements, t2g) {
+orf = t2g$Gene[t2g$name == gene]
+description = t2g$description[t2g$name == gene]
+dat = measurements %>% dplyr::filter(Gene == orf)
+p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
+            geom_tile(aes(fill=Expression)) +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+p_cond_box = ggplot(dat, aes(x = Condition, y = Expression)) +
+             geom_boxplot() +
+             geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE) +
+             coord_flip() +
+             theme(axis.text.x = element_blank())
+             
+
+p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
+               geom_boxplot() +
+               geom_text_repel(aes(label = strain_outlier), size=2, na.rm = TRUE) +
+               theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+text = paste0(gene, " (", orf, "): ", description)
+p_desc = ggplot() +
+ annotate("text", x = 4, y = 25, size=8, label = text)
+
+grid.arrange(p_heatmap + theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+          p_cond_box,
+          p_strain_box + theme(legend.position="none", axis.text.y=element_blank()),
+          textGrob(do.call(paste, c(as.list(strwrap(text, width = 0.7 * getOption("width"))), sep="\n"))), nrow=2, ncol=2)
 }
 
-residual_plot = function(gene, all) {
-  dat = all %>% dplyr::filter(name == gene) %>% unnest()
+residual_plot = function(gene, all, t2g) {
+  orf = t2g$Gene[t2g$name == gene]
+  dat = all %>% dplyr::filter(Gene == orf) %>% separate(sample_id, c('Condition', 'Strain'), sep = '_')
 
-  p_heatmap1 = ggplot(dat, aes(x = Strain, y = Condition, fill = Base_model_aug_resid)) +
+  p_heatmap1 = ggplot(dat %>% filter(residual_type == 'Base'), aes(x = Strain, y = Condition, fill = residual)) +
                 geom_tile() +
                 scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
                 labs(fill = "Residual") +
                 ggtitle("Expression ~ 1")
 
-  p_heatmap2 = ggplot(dat, aes(x = Strain, y = Condition, fill = Strain_model_aug_resid)) +
+  p_heatmap2 = ggplot(dat %>% filter(residual_type == 'Strain'), aes(x = Strain, y = Condition, fill = residual)) +
                 geom_tile() +
                 scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
                 labs(fill = "Residual") +
                 ggtitle("Expression ~ Strain")
 
-  p_heatmap3 = ggplot(dat, aes(x = Strain, y = Condition, fill = Condition_model_aug_resid)) +
+  p_heatmap3 = ggplot(dat %>% filter(residual_type == 'Condition'), aes(x = Strain, y = Condition, fill = residual)) +
                 geom_tile() +
                 scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
                 labs(fill = "Residual") +
                 ggtitle("Expression ~ Condition")
 
-  p_heatmap4 = ggplot(dat, aes(x = Strain, y = Condition, fill = Full_model_aug_resid)) +
+  p_heatmap4 = ggplot(dat %>% filter(residual_type == 'Full'), aes(x = Strain, y = Condition, fill = residual)) +
                 geom_tile() +
                 scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -107,7 +120,21 @@ residual_plot = function(gene, all) {
                p_heatmap3, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
                p_heatmap4) #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()))
 }
-residual_plot('ATP8', genes)
+
+```
+
+
+```{r}
+expression_plot('ATP8', measurements, t2g)
+residual_plot('ATP8', std_residuals, t2g)
+```
+
+Looks like our filtering is bad:
+
+```{r}
+out = genes %>% select(starts_with('Gene')) %>% summarize_all(mean) %>% left_join(model_quality %>% filter(model_type == 'Full') %>% select(Gene, r.squared))
+
+ggplot(out,aes(y = r.squared, x = Gene_mean)) + geom_point()
 ```
 
 

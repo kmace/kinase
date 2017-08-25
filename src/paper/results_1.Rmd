@@ -10,19 +10,20 @@
 
 Data is aligned with STAR, and then expression levels are normailzed using DESeq's variance stabalizing transformation. It is then loaded in for analysis.
 
-```{r, ref.label=data_loading, eval=FALSE}
+
+```{r ref.label= 'data_loading', eval=FALSE}
 ```
 
 #### Calculation of statistics, and filtering:
 
 We then calculate basic statistics on the gene expression data:
 
-```{r ref.label=gene_statistics, eval=FALSE}
+```{r ref.label='gene_statistics', eval=FALSE}
 ```
 
 Genes with no variability will be problematic in downstream analysis. As we can infer very little about these genes, it is apprpriate to filter them out. We will arbitrarily filter out genes whos dynamic range is less than 1 in all the samples
 
-```{r ref.label=gene_filter, eval=FALSE}
+```{r ref.label='gene_filter', eval=FALSE}
 ```
 
 
@@ -48,7 +49,7 @@ There are 300 samples, each with an applied condition, kinase inhibition, and a 
 
 When plotting the gene expression vectors in t-SNE space, we see that the samples cluster into distinct kinase, and condition clusters:
 
-```{r test, message = FALSE}
+```{r, message = FALSE}
 library(ggrepel)
 
 ggplot(sample_tsne,

@@ -50,7 +50,8 @@ genes = measurements %>%
 
 
 ```{r gene_filter}
-genes = genes %>% filter(Gene_range > 1)
+genes = genes %>% filter(Gene_range > 1 & Gene_mean > 6) 
+genes = genes %>% left_join(t2g)
 ```
 
 
@@ -121,6 +122,31 @@ model_quality = models %>%
   gather(model_type, model_data, -Gene) %>% 
   mutate(model_type = map(model_type, function(x) strsplit(x,'_')[[1]][1])) %>% 
   unnest()
+```
+
+
+```{r call_outlier}
+
+is_outlier <- function(v, coef=1.5){
+  quantiles <- quantile(v,probs=c(0.25,0.75))
+  IQR <- quantiles[2]-quantiles[1]
+  res <- v < (quantiles[1]-coef*IQR)|v > (quantiles[2]+coef*IQR)
+  return(res)
+}
+
+
+measurements = measurements %>% group_by(Gene, Condition) %>%
+                mutate(is_condition_outlier = is_outlier(Expression),
+                       condition_outlier = ifelse(is_condition_outlier,
+                                                  as.character(Strain),
+                                                  NA)) %>%
+                ungroup() %>%
+              group_by(Gene, Strain) %>%
+                mutate(is_strain_outlier = is_outlier(Expression),
+                       strain_outlier = ifelse(is_strain_outlier,
+                                               as.character(Condition),
+                                               NA)) %>%
+                ungroup()
 ```
 
 
