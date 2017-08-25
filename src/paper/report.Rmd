@@ -1,9 +1,11 @@
 ---  
 title: "An analysis of stress propagation through the kinome reveals"
 output:
-  html_document:
-    toc: yes
   pdf_document:
+    toc: yes
+    includes:
+      in_header: header.tex
+  html_document:
     toc: yes
 ---
 
