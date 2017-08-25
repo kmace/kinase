@@ -21,7 +21,7 @@ We then calculate basic statistics on the gene expression data:
 ```{r ref.label='gene_statistics', eval=FALSE}
 ```
 
-Genes with no variability will be problematic in downstream analysis. As we can infer very little about these genes, it is apprpriate to filter them out. We will arbitrarily filter out genes whos dynamic range is less than 1 in all the samples
+Genes with no variability will be problematic in downstream analysis. As we can infer very little about these genes, it is apprpriate to filter them out. We will arbitrarily filter out genes whos dynamic range is less than 1 in all the samples. as well as genes that have a low level of counts (Mean expression < 2^6 == 64 Counts)
 
 ```{r ref.label='gene_filter', eval=FALSE}
 ```

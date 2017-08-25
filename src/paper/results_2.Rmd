@@ -36,13 +36,6 @@ model_quality %>%
  
  Okay, so for most genes, the model does well. For what genes does it perform badly?
  
- 
-```{r}
-model_quality %>% 
-    filter(model_type == 'Full') %>%
-    select(Gene, name, r.squared) %>% 
-    arrange(r.squared) %>% head()
-```
 Lets look at an example of strong and week performace:
 
 ```{r, echo=FALSE}
@@ -123,22 +116,59 @@ residual_plot = function(gene, all, t2g) {
 
 ```
 
-
+ 
 ```{r}
-expression_plot('ATP8', measurements, t2g)
-residual_plot('ATP8', std_residuals, t2g)
+model_quality %>% left_join(t2g) %>%
+    filter(model_type == 'Full') %>%
+    select(Gene, name, r.squared) %>% 
+    arrange(r.squared) %>% head(5) %>% knitr::kable(caption = 'Worst Models')
+```
+Lets take a look at NAT3
+\newpage
+\blandscape
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+expression_plot('NAT3', measurements, t2g)
 ```
 
-Looks like our filtering is bad:
+
+\newpage
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+residual_plot('NAT3', std_residuals, t2g)
+```
+\elandscape
+
+\newpage
 
 ```{r}
-out = genes %>% select(starts_with('Gene')) %>% summarize_all(mean) %>% left_join(model_quality %>% filter(model_type == 'Full') %>% select(Gene, r.squared))
-
-ggplot(out,aes(y = r.squared, x = Gene_mean)) + geom_point()
+model_quality %>% left_join(t2g) %>%
+    filter(model_type == 'Full') %>%
+    select(Gene, name, r.squared) %>% 
+    arrange(-r.squared) %>% head(5) %>% knitr::kable(caption = 'Best Models')
 ```
+Lets take a look at HBN1
+
+\newpage
+\blandscape
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+expression_plot('HBN1', measurements, t2g)
+```
+\elandscape
+
+\newpage
+\blandscape
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+residual_plot('HBN1', std_residuals, t2g)
+```
+\elandscape
+
+\newpage
 
 
-What makes the model week? are there any features of the genes that have low scores? $R^2$ is a general thing for all 300 data points, so its not like its pulling out massive outliers (FUS1 and HSP12 have very hight $R^2$)
+
+What makes the model week? for very low scores (<.4) we generally see taht this is dominated by genes with low expression values. 
+
+But are there any __features__ of the genes that have low scores? $R^2$ is a general thing for all 300 data points, so its not like its pulling out massive outliers (FUS1 and HSP12 have very hight $R^2$)
 
 Proving that this model is actually performing well:
 

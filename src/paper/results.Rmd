@@ -5,7 +5,7 @@ library(tidyverse)
 load('../../input/images/paper_data.RData')
 ```
 
-```{r, child = 'results_1.Rmd'}
+```{r, child = 'results_1.Rmd', cache=TRUE}
 ```
 
 ```{r child = 'results_2.Rmd', cache=TRUE}
