@@ -20,5 +20,5 @@ load('../../input/images/paper_data.RData')
 # ```{r child = 'results_5.Rmd', cache=TRUE}
 # ```
 # 
-# ```{r child = 'results_6.Rmd', cache=TRUE}
-# ```
+```{r child = 'results_6.Rmd', cache=TRUE}
+```
