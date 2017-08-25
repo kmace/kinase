@@ -2,20 +2,11 @@
 
 To break this down, lets see how much $R^2$ we loose by removing a variable from the model:
 
+```{r ref.label='relative_importance'}
+```
+
+
 ```{r}
-library(tidyverse)
-library(relaimpo)
-getri = function(mod){
-r = calc.relimp(mod, type = 'last')@last
-return(r)
-}
-
-load('../../input/images/model_parameters.RData')
-
-out = lapply(genes$Full_model, getri)
-lasts = do.call(rbind, out)
-#colnames(lasts) = c('Strain', 'Condition')
-#pdf('')
 
 # How much aditional R2 would I get by adding in a random assignment of factor size 10, or 30?
 
