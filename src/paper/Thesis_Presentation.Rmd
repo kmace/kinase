@@ -1,0 +1,49 @@
+---
+title: "Thesis Meeting"
+author: "Kieran Mace"
+date: "August 30, 2017"
+output:
+  ioslides_presentation: default
+  beamer_presentation: default
+  slidy_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+Kinase singalling through the cell is a complex sytem that allows the cell to make informed adaptive transcriptional responses to changes in the external enviroment. 
+
+![](http://mmbr.asm.org/content/66/2/300/F3.large.jpg){width=250px}
+
+## Experimental Design
+
+![](src/paper/img/Experiment_Cartoon.png)
+
+## Detecting a Condition specific Kinase Signal
+
+$$ \Delta E_{gck} = C_{gc} + K_{gk} + R_{gck} $$
+Where $\Delta E$ is the change in expression for gene $g$, condition $c$, and kinase $k$.
+$C$ is the contribution to change in expression due to the condition
+$K$ is the contribution to change in expression due to the kinase
+and $R$ is the Residual, representing the information that the linear model cannot capture, as well as noise. 
+
+## Bullet
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
