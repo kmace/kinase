@@ -26,6 +26,9 @@ read_chunk("temp")
 ```{r, child = 'summary.Rmd'}
 ```
 
+```{r, child = 'supplement.Rmd'}
+```
+
 ```{r}
 unlink('temp')
 ```

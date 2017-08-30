@@ -1,20 +1,24 @@
 ## A strategy to identify Kinome wide signaling under stress
 
-### Experimental Pipeline:
+### General Overview:
+
+#### Experimental Pipeline:
 
 ![](img/Experiment_Cartoon.png)
 
-### Analysis Pipeline:
+#### Analysis Pipeline:
 
-#### Load Data:
+![](img/Kinase_Pipeline.png)
 
-Data is aligned with STAR, and then expression levels are normalized using DESeq's variance stabilizing transformation. It is then loaded in for analysis.
+### Data Loading and Normalization:
+
+Data is aligned with STAR, and then expression levels are normalized using DESeq's variance stabilizing transformation. It is then loaded in for analysis. (see [here](## Sequence Alignment, Normalization, and Transformation:) for how its done)
 
 
 ```{r ref.label= 'data_loading', eval=FALSE}
 ```
 
-#### Calculation of statistics, and filtering:
+### Calculation of statistics, and filtering:
 
 We then calculate basic statistics on the gene expression data:
 
@@ -26,27 +30,11 @@ Genes with no variability will be problematic in downstream analysis. As we can 
 ```{r ref.label='gene_filter', eval=FALSE}
 ```
 
+### Clustering of samples shows distinct kinases, and condition, and epistatic groups
 
-### Full dataset heatmap
-
-Here we show the raw expression data, ordered by condition, or kinase
-
-#### Ordered by condition:
-
-![](img/by_condition.png)
-
-\newpage
-
-#### Ordered by kinase:
-
-![](img/by_strain.png)
-
-\newpage
-
-### Clustering of samples shows distinct kinases, and condition groups.
+#### Clustering with TSNE
 
 There are 300 samples, each with an applied condition, kinase inhibition, and a gene expression vector. Here, we cluster the samples by performing t-SNE on gene expression vectors with default t-SNE parameters
-
 
 ```{r ref.label='tsne_cluster', eval=FALSE}
 ```
@@ -70,6 +58,11 @@ ggplot(sample_tsne,
 
 ```
 
+#### Full dataset heatmap
+
+Using these groups, we order the samples in terms of their cluster, and show the full heatmap.
+
+TODO: Define tsne clusters, and then show the clusters in a morpheous image
 
 <!-- heirarchically clustering the t-SNE projections: -->
 
@@ -93,6 +86,16 @@ ggplot(sample_tsne,
 <!-- ``` -->
 
 
+Currently, we just show the data ordered by Stress, or Kinase
 
-![](img/Kinase_Pipeline.png)
+##### Ordered by condition:
+
+![](img/by_condition.png)
+
+\newpage
+
+##### Ordered by kinase:
+
+![](img/by_strain.png)
+
 \newpage

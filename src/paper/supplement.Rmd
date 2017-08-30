@@ -1,0 +1,9 @@
+# Supplement:
+
+## Sequence Alignment, Normalization, and Transformation:
+
+### Sequence Alignment
+
+### Normalization and Transformation
+
+### Heatmaps by condition and by strain
