@@ -79,7 +79,7 @@ text(sft_table$median.k.,
 
 # should be 6, but i like 8
 
-sft$powerEstimate = 8
+#sft$powerEstimate = 6
 
 net = blockwiseModules(datExpr,
                        power = sft$powerEstimate,
@@ -87,7 +87,7 @@ net = blockwiseModules(datExpr,
                        # corType = 'bicor',
                        # corOptions = list(maxPOutliers = 0.05),
                        minModuleSize = 4,
-                       deepSplit = 4,
+                       deepSplit = 2, # 4 is very strong, 2 gets the job done. not sure about 3
                        maxBlockSize = 30000,
                        numericLabels = TRUE,
                        pamRespectsDendro = FALSE,
@@ -95,13 +95,18 @@ net = blockwiseModules(datExpr,
                        #saveTOMFileBase = "kinaseTOM",
                        verbose = 3)
 
-mergedColors = labels2colors(net$colors)
-
-table(mergedColors)
-length(table(mergedColors))
-
 moduleLabels = net$colors
+moduleColors = labels2colors(moduleLabels)
 
+table(moduleColors)
+length(table(moduleColors))
+
+# [rm(list=setdiff(ls(), c("datExpr", "sft", "network_type", "t2g", "expr", "full_std_resid_matrix", "datTraits", "resid")))
+
+modules = tibble(Gene = colnames(datExpr),
+                 module = as.character(moduleLabels),
+                 color = moduleColors) %>%
+                 left_join(t2g)
 
 MEs = net$MEs;
 
@@ -126,8 +131,31 @@ d3heatmap(moduleTraitCor)
 GOenr = GOenrichmentAnalysis(moduleLabels, yeastORFs = colnames(datExpr), organism = 'yeast')
 tab = GOenr$bestPTerms[[4]]$enrichment
 
-modules = tibble(Gene = colnames(datExpr), module = as.character(moduleLabels)) %>% left_join(t2g) %>% group_by(module) %>% nest(.key = gene_info) %>% full_join(tab %>% group_by(module) %>% nest(.key = go_info))
+#all = modules %>% group_by(module) %>% nest(.key = gene_info) %>% full_join(tab %>% group_by(module) %>% nest(.key = go_info))
 
-print_module_genes = function(df){
+dir.create('WGCNA_modules')
 
+library(readr)
+
+modules %>%
+  group_by(module) %>%
+  do(write_csv(., path = paste0('WGCNA_modules/cluster_',
+                                as.character(unique(.$module)),
+                                '_genes_info.csv')))
+
+write_genes = function(df, path){
+write(df$name, file=path)
 }
+
+modules %>%
+  group_by(module) %>%
+  do(write_genes(., path = paste0('WGCNA_modules/cluster_',
+                                as.character(unique(.$module)),
+                                '_genes.txt')))
+
+
+tab %>%
+  group_by(module) %>%
+  do(write_csv(., path = paste0('WGCNA_modules/cluster_',
+                                as.character(unique(.$module)),
+                                '_go_terms.csv')))
