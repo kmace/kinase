@@ -3,16 +3,16 @@ library(dplyr)
 library(tidyr)
 library(caret)
 
-load('input/images/paper_data.RData')
+load('../../input/images/paper_data.RData')
 
-expr = t(full_std_resid_matrix)
+resid = t(full_std_resid_matrix)
 
-datTraits = tibble(Experiment = rownames(expr)) %>% separate(Experiment, c('Condition', 'Strain'), '_', remove = F)
+datTraits = tibble(Experiment = rownames(resid)) %>% separate(Experiment, c('Condition', 'Strain'), '_', remove = F)
 
 
 
-expr[abs(expr)<2] = 0
-datExpr0 = expr
+resid[abs(resid)<2] = 0
+datExpr0 = resid
 
 
 sampleTree = hclust(dist(datExpr0), method = "average");
@@ -23,7 +23,7 @@ par(mar = c(0,4,2,0))
 plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
      cex.axis = 1.5, cex.main = 2)
 
-#datExpr0 = expr
+#datExpr0 = resid
 cutoff_height = 160
 abline(h = cutoff_height, col = "red");
 
@@ -31,9 +31,10 @@ clust = cutreeStatic(sampleTree, cutHeight = cutoff_height, minSize = 10)
 
 keepSamples = (clust==1)
 datExpr = datExpr0[keepSamples, ]
+datTraits = datTraits[keepSamples, ]
 nGenes = ncol(datExpr)
 nSamples = nrow(datExpr)
-datTraits = datTraits[keepSamples, ]
+
 
 sampleTree = hclust(dist(datExpr), method = "average");
 sizeGrWindow(12,9)
@@ -44,7 +45,7 @@ plot(sampleTree, main = "Sample clustering to check no outliers", sub="", xlab="
      cex.axis = 1.5, cex.main = 2)
 
 
-collectGarbage();
+collectGarbage()
 
 enableWGCNAThreads()
 
@@ -65,36 +66,39 @@ sft = pickSoftThreshold(datExpr,
 
 sft_table = sft$fitIndices
 
-plot(sft_table$Power,
+plot(sft_table$median.k.,
      -sign(sft_table$slope) * sft_table$SFT.R.sq,
      xlab="Soft Threshold (power)",
      ylab="Scale Free Topology Model Fit,signed R^2",type="n",
      main = paste("Scale independence"));
-text(sft_table$Power,
+text(sft_table$median.k.,
      -sign(sft_table$slope) * sft_table$SFT.R.sq,
      labels=powers,
      col="red");
 
 
-# should be 10, but ive been using 7
+# should be 6, but i like 8
 
-
+sft$powerEstimate = 8
 
 net = blockwiseModules(datExpr,
                        power = sft$powerEstimate,
-                       TOMType = network_type,
+                       networType = network_type,
                        # corType = 'bicor',
                        # corOptions = list(maxPOutliers = 0.05),
-                       minModuleSize = 8,
-                       reassignThreshold = 0,
-                       maxBlockSize = 50000,
+                       minModuleSize = 4,
+                       deepSplit = 4,
+                       maxBlockSize = 30000,
                        numericLabels = TRUE,
                        pamRespectsDendro = FALSE,
-                       saveTOMs = TRUE,
-                       saveTOMFileBase = "kinaseTOM",
+                       #saveTOMs = TRUE,
+                       #saveTOMFileBase = "kinaseTOM",
                        verbose = 3)
 
 mergedColors = labels2colors(net$colors)
+
+table(mergedColors)
+length(table(mergedColors))
 
 moduleLabels = net$colors
 

@@ -1,5 +1,5 @@
 library(WGCNA);
-load('Thesis/kinase/input/images/paper_data.RData')
+load('../../input/images/paper_data.RData')
 datExpr = t(full_std_resid_matrix)
 network_type = 'signed'
 

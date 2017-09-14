@@ -53,20 +53,17 @@ datasetlist = list(
 
 library(INSPIRE)
 
-res = INSPIRE(datasetlist = datasetlist, mcnt = 100, lambda = 0.01, printoutput = 1)
-
+res = INSPIRE(datasetlist = datasetlist, mcnt = 90, lambda = 0.01, printoutput = 1)
 
 clusters = res$Z[[1]]
 clusters = tibble(Gene = names(clusters), Cluster = clusters)
 clusters = left_join(clusters, t2g, by=c('Gene' = 'target_id'))
 clusters = clusters %>% arrange(Cluster)
+write.csv(clusters,file='clusters.csv')
 
-dir.create('../../input/clusters/INSPIRE_clusters')
+dir.create('INSPIRE_clusters')
 clusters %>%
   group_by(Cluster) %>%
-  do(write_csv(., path = paste0('../../input/clusters/INSPIRE_clusters/cluster_',
+  do(write_csv(., path = paste0('INSPIRE_clusters/cluster_',
                                 as.character(unique(.$Cluster)),
                                 '.csv')))
-
-write.csv(clusters,file='../../input/clusters/INSPIRE_clusters/all_clusters.csv')
-
