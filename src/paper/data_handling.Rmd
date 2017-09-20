@@ -50,7 +50,7 @@ genes = measurements %>%
 
 
 ```{r gene_filter}
-genes = genes %>% filter(Gene_range > 1 & Gene_mean > 6) 
+genes = genes %>% filter(Gene_range > 1 & Gene_mean > 6)
 genes = genes %>% left_join(t2g)
 ```
 
@@ -62,10 +62,10 @@ Next lets do some basic clustering on the Differential Expression:
 library(tsne)
 
 do_tsne = function(mat){
-  
-  mat_meta = tibble(sample = colnames(mat)) %>% 
+
+  mat_meta = tibble(sample = colnames(mat)) %>%
     separate(sample, c('Condition', 'Strain'), "_", remove = FALSE)
-  
+
   pca = prcomp(t(mat))
   pca = data.frame(pca$x, sample = rownames(pca$x))
   meta_pc = full_join(mat_meta, pca)
@@ -75,9 +75,9 @@ do_tsne = function(mat){
   return(meta_pc)
 }
 
-gene_matrix = genes %>% 
+gene_matrix = genes %>%
   select(Gene, Condition, Strain, Differential_Expression) %>%
-  unite(sample, c(Condition, Strain), remove = TRUE) %>% 
+  unite(sample, c(Condition, Strain), remove = TRUE) %>%
   group_by(Gene, sample) %>%
   summarise(Differential_Expression = mean(Differential_Expression)) %>% # median would be better
   ungroup() %>%
@@ -107,7 +107,7 @@ list_model <- list(Strain_model = Expression ~ Strain,
 
 models = genes %>%
   nest() %>%
-  mutate_at(.vars=("data"),.funs=list_model) 
+  mutate_at(.vars=("data"),.funs=list_model)
 
 ```
 
@@ -116,11 +116,11 @@ Now lets look at model quality on a per gene basis:
 ```{r model_quality}
 model_quality = models %>%
   select(Gene, data, ends_with('model')) %>%
-  mutate_at(.vars=vars(ends_with('model')), 
+  mutate_at(.vars=vars(ends_with('model')),
             .funs = funs(glance = map(.,glance))) %>%
   select(Gene, ends_with('glance')) %>%
-  gather(model_type, model_data, -Gene) %>% 
-  mutate(model_type = map(model_type, function(x) strsplit(x,'_')[[1]][1])) %>% 
+  gather(model_type, model_data, -Gene) %>%
+  mutate(model_type = map(model_type, function(x) strsplit(x,'_')[[1]][1])) %>%
   unnest()
 ```
 
@@ -154,10 +154,10 @@ Now lets extract the residuals for each model into it's own wide matrix, for rep
 
 ```{r extract_residuals}
 std_residuals = models %>%
-  mutate_at(.vars=vars(ends_with('model')), 
+  mutate_at(.vars=vars(ends_with('model')),
             .funs = funs(aug = map(.,augment))) %>%
-  mutate_at(.vars=vars(ends_with('aug')), 
-            .funs = funs(std_resid = map(.,'.std.resid'), 
+  mutate_at(.vars=vars(ends_with('aug')),
+            .funs = funs(std_resid = map(.,'.std.resid'),
                          raw_resid=map(.,'.resid'))) %>%
   select(Gene, data, ends_with('std_resid')) %>%
   unnest() %>%
@@ -172,6 +172,26 @@ std_residuals = models %>%
          Full = Full_model_aug_std_resid,
          Base = Base_model_aug_std_resid) %>%
   gather(residual_type, residual, -sample_id, -Gene)
+
+  # raw_residuals = models %>%
+  #   mutate_at(.vars=vars(ends_with('model')),
+  #             .funs = funs(aug = map(.,augment))) %>%
+  #   mutate_at(.vars=vars(ends_with('aug')),
+  #             .funs = funs(std_resid = map(.,'.std.resid'),
+  #                          raw_resid=map(.,'.resid'))) %>%
+  #   select(Gene, data, ends_with('raw_resid')) %>%
+  #   unnest() %>%
+  #   group_by(Strain, Gene, Condition) %>%
+  #   # should only apply to WT
+  #   summarize_at(.vars=vars(ends_with('resid')), mean) %>%
+  #   ungroup() %>%
+  #   mutate(sample_id = paste(Condition,Strain, sep = '_')) %>%
+  #   select(Gene, sample_id, ends_with('resid')) %>%
+  #   rename(Strain = Strain_model_aug_raw_resid,
+  #          Condition = Condition_model_aug_raw_resid,
+  #          Full = Full_model_aug_raw_resid,
+  #          Base = Base_model_aug_raw_resid) %>%
+  #   gather(residual_type, residual, -sample_id, -Gene)
 
 get_matrix = function(data, type='Strain'){
   cm = data %>%
@@ -203,12 +223,12 @@ lasts = do.call(rbind, lapply(models$Full_model, getri))
 ```
 
 ```{r get_weights}
-weights = models %>% 
-  select(Gene, data, Strain_model) %>% 
-  mutate(weights = Strain_model %>% map(tidy)) %>% 
-  select(Gene, weights) %>% 
-  unnest() %>% 
-  select(Gene, term, estimate) %>% 
+weights = models %>%
+  select(Gene, data, Strain_model) %>%
+  mutate(weights = Strain_model %>% map(tidy)) %>%
+  select(Gene, weights) %>%
+  unnest() %>%
+  select(Gene, term, estimate) %>%
   spread(key = term,value = estimate)
 
 w_mat = as.matrix(weights %>% select(-Gene))
@@ -221,4 +241,3 @@ clus = cutree(h,k=30)
 clus = tibble(Gene = names(clus), cluster = clus)
 clus = left_join(clus, t2g)
 ```
-
