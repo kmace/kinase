@@ -159,3 +159,13 @@ tab %>%
   do(write_csv(., path = paste0('WGCNA_modules/cluster_',
                                 as.character(unique(.$module)),
                                 '_go_terms.csv')))
+
+
+# After meme is run:
+
+tfs = do.call(rbind,
+lapply(dir('WGCNA_modules/tfs/'),
+function(x) {
+if(file.size(paste0('WGCNA_modules/tfs/', x)) > 0) {
+return(data.frame(file = x, TF = read.table(paste0('WGCNA_modules/tfs/',x), stringsAsFactors = F)))
+}})) %>% as_tibble %>% separate(file, c('c', 'module', 't'), sep = '_') %>% dplyr::rename(TF = V1) %>% dplyr::select(module, TF)
