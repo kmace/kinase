@@ -7,7 +7,7 @@ load('../../input/images/paper_data.RData')
 
 resid = t(full_std_resid_matrix)
 
-datTraits = tibble(Experiment = rownames(resid)) %>% separate(Experiment, c('Condition', 'Strain'), '_', remove = F)
+datTraits = tibble(Experiment = rownames(resid)) %>% separate(Experiment, c('Strain_Code', 'Condition'), '_', remove = F)
 
 
 
@@ -117,9 +117,9 @@ nGenes = ncol(datExpr);
 nSamples = nrow(datExpr);
 
 simple_design_matrix = predict(dummyVars(~Condition + Strain, datTraits), datTraits)
-complex_design_matrix = predict(dummyVars(~Experiment, datTraits), datTraits)
+#complex_design_matrix = predict(dummyVars(~Experiment, datTraits), datTraits) Waste of time, this is just a shuffled identity matrix
 
-moduleTraitCor = cor(MEs, complex_design_matrix, use = "p");
+moduleTraitCor = cor(MEs, simple_design_matrix, use = "p");
 
 moduleTraitPvalue = corPvalueStudent(moduleTraitCor, nSamples);
 
