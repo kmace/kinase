@@ -13,7 +13,7 @@ Kinases are largely responsicble for mediating information from the environment 
 
 ### Strategy
 
-28 Analog sensitive kinases were o
+28 Stress assocated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by rna-seq. 
 
 #### Experimental Cartoon:
 
@@ -58,17 +58,20 @@ When plotting the gene expression vectors in t-SNE space, we see that the sample
 ```{r, message = FALSE, fig.width=12, fig.height=10}
 library(ggrepel)
 select = dplyr::select
-ggplot(sample_tsne,
+tsne_plot = function(df){
+ggplot(df,
        aes(x=TSNE1, 
            y=TSNE2, 
            color = Condition, 
-           label = Strain)) +
+           label = Strain_Code)) +
   geom_point(size=4) +
   geom_text_repel(size = 2,
                   color = 'black',
                   point.padding = NA,
                   box.padding = unit(0.01, "lines"))
-
+}
+tsne_plot(sample_tsne %>% filter(grepl('WT', Strain_Code))) + ggtitle('just WT')
+tsne_plot(sample_tsne)
 ```
 
 #### Full dataset heatmap
