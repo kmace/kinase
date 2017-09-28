@@ -69,15 +69,33 @@ possible_motifs %>%
     G_movment = paste(C_contribution_to_G, K_contribution_to_G, sep='/')
     ) %>%
   mutate(
-    synopsis = paste('C has direct effect:', C_acts_on_G,
-                     'C has effect through K:', C_acts_on_G_through_K,
-                     'D has general effect:', D_acts_on_G_generally,
-                     'D reverses C\'s effect:', D_blocks_C_action_on_G_through_K,
-                     'D redundant because C:', D_redundant_because_C,
-                     'Kinase Transitions:', K_transitions,
-                     sep = '\n')
-  ) %>% View()
-
+    synopsis = paste(paste('C has direct effect:', C_acts_on_G, sep = ' '),
+                     paste('C direct effect sign: ', C_on_G, sep = ' '),
+                     paste('D has a condition independent effect (K_base is on and affects G):', D_acts_on_G_through_K_without_C, sep = ' '),
+                     paste('D effect sign (through K_final being off):', flip_reg(K_on_G), sep = ' '),
+                     paste('C has an indirect effect through K (no D):', C_acts_on_G_through_K_without_D, sep = ' '),
+                     paste('C indirect effect through K (no D) sign:', paste(C_on_K, K_on_G, sep='/'), sep = ' '),
+                     paste('D blocks C effect:', D_blocks_C_action_on_G_through_K, sep = ' '),
+                     paste('D and C are redundant:', D_and_C_are_redundant, sep = ' '),
+                     paste('Kinase Transitions:', K_transitions, sep = ' '),
+                     paste('Linear Expectation (C, K, R):', paste0('(', C_on_G,
+                                                                   ', ', flip_reg(K_on_G),
+                                                                   ', 0)'), sep = ' '),
+                     paste('Complex Expectation (C, K, R):', paste0('(', C_on_G,
+                                                                    ', ', flip_reg(K_on_G),
+                                                                    ',', paste(C_on_K,
+                                                                               K_on_G,
+                                                                               sep='/') ,')'), sep = ' '),
+                      sep = '\n')
+    # g = purrr::map(., function(x) graph_from_data_frame(data.frame(from = c('c','c','k'),
+    #                                      to = c('k', 'g', 'g'),
+    #                                      strength = c(reg_to_num(x$C_on_K),
+    #                                                   reg_to_num(x$C_on_G),
+    #                                                   reg_to_num(x$K_on_G))),
+    #                           directed=T,
+    #                           vertices = nodes))
+    ) -> outcomes
+writeLines(outcomes$synopsis[2])
 	   #synopsis = paste('Condition causes gene to go in a', C_on_G, 'direction.\n',
 	   #					'With no analog, Kinase is in', Kinase_sensing_state, 'state, which causes the gene to go in a ', K_on_G, 'direciton when on.\n',
 		#			     'Kinase was basally', K_base_state, 'and',

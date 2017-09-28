@@ -17,8 +17,14 @@ library(knitr)
 opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
 invisible(purl("data_handling.Rmd", output="temp", quiet=TRUE))
 read_chunk("temp")
+unlink('temp')
 ```
 
+```{r, child = 'abstract.Rmd'}
+```
+
+```{r, child = 'introduction.Rmd'}
+```
 
 ```{r, child = 'results.Rmd'}
 ```
@@ -29,7 +35,4 @@ read_chunk("temp")
 ```{r, child = 'supplement.Rmd'}
 ```
 
-```{r}
-unlink('temp')
-```
 

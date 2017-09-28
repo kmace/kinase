@@ -1,4 +1,4 @@
-# Supplement:
+# Supplement: {#Supplement}
 
 ## Sequence Alignment, Normalization, and Transformation:
 
@@ -7,3 +7,250 @@
 ### Normalization and Transformation
 
 ### Heatmaps by condition and by strain
+
+## The linear model of Condition and Stress identity accurately describes gene expression data
+(or at least for most genes)
+
+#### I hope to show that:
+
+1. What's happening: I'm going to build the linear model
+2. I'm going to show that it has good performance over most genes. 
+
+### Building the models:
+
+For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibition). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condition, and from the kinase.  For example:
+
+For a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2), or
+
+$$\Delta E_g \approx C_g + K_g$$
+Where $\Delta E$ is the change in log expression, and $C$ and $K$ are the contributions from the condition and kinase respectively. 
+
+
+```{r ref.label='create_linear_models', eval = FALSE}
+```
+
+In order to asses the quality for each fit, lets calculate the $R^2$, or the percentage of variance explained for each gene from the model.
+
+```{r ref.label= 'model_quality', eval=FALSE}
+```
+
+Lets look at the $R^{2}$ for each gene in the full model:
+
+```{r}
+model_quality %>% 
+    filter(model_type == 'Full') %>% # Both kinase, and condition are taken into account 
+    ggplot(aes(x=r.squared)) + 
+    geom_density(fill='blue', alpha=.5) +
+    ggtitle('Percentage of variance explained by the full model')
+```
+ 
+ Okay, so for most genes, the model does well. For what genes does it perform badly?
+ 
+Lets look at an example of strong and week performance:
+
+```{r, echo=FALSE}
+library(stringr)
+library(gridExtra)
+library(RGraphics)
+library(ggrepel)
+
+expression_plot = function(gene, measurements, t2g) {
+orf = t2g$Gene[t2g$name == gene]
+description = t2g$description[t2g$name == gene]
+dat = measurements %>% dplyr::filter(Gene == orf)
+p_heatmap = ggplot(dat, aes(y=Condition, x = Strain)) +
+            geom_tile(aes(fill=Expression)) +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+p_cond_box = ggplot(dat, aes(x = Condition, y = Expression)) +
+             geom_boxplot() +
+             geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE) +
+             coord_flip() +
+             theme(axis.text.x = element_blank())
+             
+
+p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
+               geom_boxplot() +
+               geom_text_repel(aes(label = strain_outlier), size=2, na.rm = TRUE) +
+               theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+text = paste0(gene, " (", orf, "): ", description)
+p_desc = ggplot() +
+ annotate("text", x = 4, y = 25, size=8, label = text)
+
+grid.arrange(p_heatmap + theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+          p_cond_box,
+          p_strain_box + theme(legend.position="none", axis.text.y=element_blank()),
+          textGrob(do.call(paste, c(as.list(strwrap(text, width = 0.7 * getOption("width"))), sep="\n"))), nrow=2, ncol=2)
+}
+
+residual_plot = function(gene, all, t2g) {
+  orf = t2g$Gene[t2g$name == gene]
+  dat = all %>% dplyr::filter(Gene == orf) %>% separate(sample_id, c('Condition', 'Strain'), sep = '_')
+
+  p_heatmap1 = ggplot(dat %>% filter(residual_type == 'Base'), aes(x = Strain, y = Condition, fill = residual)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ 1")
+
+  p_heatmap2 = ggplot(dat %>% filter(residual_type == 'Strain'), aes(x = Strain, y = Condition, fill = residual)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Strain")
+
+  p_heatmap3 = ggplot(dat %>% filter(residual_type == 'Condition'), aes(x = Strain, y = Condition, fill = residual)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Condition")
+
+  p_heatmap4 = ggplot(dat %>% filter(residual_type == 'Full'), aes(x = Strain, y = Condition, fill = residual)) +
+                geom_tile() +
+                scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') +
+                theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                labs(fill = "Residual") +
+                ggtitle("Expression ~ Strain + Condtion")
+
+
+
+  grid.arrange(p_heatmap1, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+               p_heatmap2, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+               p_heatmap3, #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()),
+               p_heatmap4) #+ theme(legend.position="none", axis.text.x=element_blank(), axis.text.y=element_blank()))
+}
+
+```
+
+ 
+```{r, warning=FALSE, message=FALSE}
+model_quality %>% left_join(t2g) %>%
+    filter(model_type == 'Full') %>%
+    select(Gene, name, r.squared) %>% 
+    arrange(r.squared) %>% head(5) %>% knitr::kable(caption = 'Worst Models')
+```
+
+Lets take a look at NAT3:
+
+\blandscape
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+expression_plot('NAT3', measurements, t2g)
+```
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+residual_plot('NAT3', std_residuals, t2g)
+```
+
+\elandscape
+
+\newpage
+
+```{r, message=FALSE, warning=FALSE}
+model_quality %>% left_join(t2g) %>%
+    filter(model_type == 'Full') %>%
+    select(Gene, name, r.squared) %>% 
+    arrange(-r.squared) %>% head(5) %>% knitr::kable(caption = 'Best Models')
+```
+
+Lets take a look at HBN1:
+
+
+\blandscape
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+expression_plot('HBN1', measurements, t2g)
+```
+
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+residual_plot('HBN1', std_residuals, t2g)
+```
+
+\elandscape
+
+\newpage
+
+Lastly, lets take a look at HSP12:
+
+\blandscape
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+expression_plot('HSP12', measurements, t2g)
+```
+
+
+```{r, fig.width=11, fig.height=8, echo=FALSE}
+residual_plot('HSP12', std_residuals, t2g)
+```
+
+\elandscape
+
+
+
+What makes the model weak? for very low scores (<.3) we generally see that this is dominated by genes with low expression values. 
+
+For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistasis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence. 
+
+Potential way to prove that this model is actually performing well:
+What is the distribution of R^2 for row shuffled, column shuffled, or completely shuffled inputs?
+
+\newpage
+
+
+
+
+
+<!-- What does strains give you, that conditions dont? -->
+<!-- break down ESR -->
+
+\newpage
+## Model recapitulates know gene expression modules
+* Clustering of model coefficients reveal known gene expression modules
+* Promoter Motifs
+* Clusters in INSPIRE
+* Identification of Kinase TF interactions.
+
+This section is missing
+
+\newpage
+
+
+## Condition and Strain identities explain non-redundant aspects of the gene expression
+Since a kinase inhibition is a much more targeted perturbation compared to a stress, we should ask how much information is in each contribution. 
+
+To break this down, lets see how much $R^2$ we loose by removing a variable from the model:
+
+$$ R^2_{loss} = R^2_{full} - R^2_{reduced} $$
+
+```{r ref.label='relative_importance', eval=FALSE}
+```
+
+
+```{r}
+gather(as_tibble(lasts), Last_Factor, added_r2) %>% 
+  ggplot(aes(x = added_r2, fill = Last_Factor)) + 
+  geom_density(alpha = .5) + 
+  ggtitle('R^2 loss from removing variable', subtitle = 'Each variables contribution when included in the model last, also sometimes called usefulness')
+```
+
+
+## Needs Placement
+
+
+I don't know much about SLT2, and PCK1, other than they are in the same pathway. Lets take a look at them. (residual cutoff at 2)
+
+```{r, warning=FALSE}
+p = hypotheses %>% 
+  filter(abs(residual) > 2) %>% 
+  filter(Strain %in% c('SLT2', 'PKC1')) %>% 
+  select(name, residual, Strain, Condition) %>% 
+  spread(Strain, residual) %>% 
+  mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% 
+  ggplot(aes(x=SLT2,y=PKC1,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
+plotly::ggplotly(p, width = 880)
+```
