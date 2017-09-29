@@ -1,4 +1,6 @@
-.Rhistory
-*.RData
-.DS_Store
-*.dcf
+!*.R
+*
+#!*..Rhistory
+#*.RData
+#.DS_Store
+#*.dcf
