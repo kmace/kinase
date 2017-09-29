@@ -19,7 +19,7 @@ library(broom)
 library(tibble)
 library(magrittr)
 
-measurements = vlog %>% 
+measurements = vlog %>%
   as.data.frame %>%
   rownames_to_column("Gene") %>%
   as_tibble %>%
@@ -79,36 +79,19 @@ genes = measurements %>%
          Gene_sd = map_dbl(data, ~ sd(.$Expression)),
          Gene_mean = map_dbl(data, ~ mean(.$Expression))) %>%
   left_join(t2g)
-  
-          
+
+
 ```
 
 create the linear model and extract model data:
 
 ```{r create_linear_models}
-# Dont care about any other kinds of models anymore. base is just the mean which I can get easily.
 
-# lin_mod = function(formula) {
-#   function(data, ...){
-#     map(data, ~ lm(formula, data = .))
-#   }
-# }
-# 
-# list_model <- list(#Strain_model = Expression ~ Strain,
-#                    #Condition_model = Expression ~ Condition,
-#                    Full_model = Expression ~ Strain + Condition,
-#                    Base_model = Expression ~ 1) %>%
-#   lapply(lin_mod)
-# 
-# 
-# models = genes %>%
-#   mutate_at(.vars=("data"),.funs=list_model)
-
-genes %<>% 
+genes %<>%
   mutate(model = map(data, ~lm(Expression ~ Strain + Condition, data = .))) %>%
-  mutate_at(.vars = vars(model), 
-            .funs = funs(performance = map(.,glance), 
-                         weights = map(.,tidy), 
+  mutate_at(.vars = vars(model),
+            .funs = funs(performance = map(.,glance),
+                         weights = map(.,tidy),
                          data_augment = map(.,augment)))
 
 ```
@@ -116,14 +99,14 @@ genes %<>%
 lets look at model performance, and figure out where our model breaks:
 
 ```{r}
-genes %>% select(Gene_mean, performance) %>% unnest() %>% ggplot(aes(x=Gene_mean, y = r.squared)) + geom_point() + geom_vline(xintercept = 5.5)
+genes %>% select(Gene_mean, performance) %>% unnest() %>% ggplot(aes(x=Gene_mean, y = r.squared)) + geom_point() + geom_vline(xintercept = 6) # TODO change this all to 5.5
 ```
 
 It seems $R^2$ looks pretty bad when gene mean is below 5.5, probably becuase these genes are dominated by noise. lets therefore filter them out:
 
 ```{r gene_filter}
-genes %<>% 
-  filter(Gene_mean > 5.5) # used to be mean > 6 to get all the good linear models. 3.6 seems good when looking at sd vs mean
+genes %<>%
+  filter(Gene_mean > 6) #TODO change this to 5.5 used to be mean > 6 to get all the good linear models. 3.6 seems good when looking at sd vs mean
 ```
 
 
@@ -147,13 +130,12 @@ do_tsne = function(mat){
   return(meta_pc)
 }
 
-gene_matrix = genes %>% unnest(data) %>%
-  select(Gene, Condition, Strain_Code, Differential_Expression) %>%
-  unite(sample, c(Condition, Strain_Code), remove = TRUE) %>%
-  #group_by(Gene, sample) %>%
-  #summarise(Differential_Expression = mean(Differential_Expression)) %>% # median would be better
-  ungroup() %>%
-  spread(sample, Differential_Expression)
+gene_matrix = genes %>%
+                unnest(data) %>%
+                select(Gene, Condition, Strain_Code, Differential_Expression) %>%
+                unite(sample, c(Condition, Strain_Code), remove = TRUE) %>%
+                ungroup() %>%
+                spread(sample, Differential_Expression)
 
 sample_tsne = do_tsne(gene_matrix %>% select(-Gene))
 
@@ -164,28 +146,29 @@ sample_tsne = do_tsne(gene_matrix %>% select(-Gene))
 Now lets extract the residuals for each model into it's own wide matrix
 
 ```{r extract_residuals}
-std_residuals = genes %>% 
-  select(data, data_augment, name) %>% 
-  unnest() %>% 
-  select(name, Condition, Strain_Code, .std.resid) %>% 
+std_residuals = genes %>%
+  select(data, data_augment, name) %>%
+  unnest() %>%
+  select(name, Condition, Strain_Code, .std.resid) %>%
   unite(sample_id, c(Strain_Code, Condition)) %>%
   rename(residual = .std.resid)
 
-full_std_resid_matrix = std_residuals %>% 
-  spread(key = sample_id, 
-         value=residual, 
-         drop = TRUE) %>% 
-  remove_rownames() %>% 
-  column_to_rownames(var = 'name') %>% 
-  as.matrix()
+std_resid_matrix = std_residuals %>%
+                     spread(key = sample_id,
+                            value=residual,
+                            drop = TRUE) %>%
+                     remove_rownames() %>%
+                     column_to_rownames(var = 'name') %>%
+                     as.matrix()
 
 
 ```
 
 Lets sort the genes into clusters by clustering on significantly large residuals:
 ```{r}
-resid = t(full_std_resid_matrix)
-datTraits = tibble(Experiment = rownames(resid)) %>% separate(Experiment, c('Strain_Code', 'Condition'), '_', remove = F)
+library(WGCNA)
+resid = t(std_resid_matrix)
+#datTraits = tibble(Experiment = rownames(resid)) %>% separate(Experiment, c('Strain_Code', 'Condition'), '_', remove = F)
 resid[abs(resid)<2] = 0
 datExpr0 = resid
 
@@ -196,16 +179,22 @@ par(cex = 0.6);
 par(mar = c(0,4,2,0))
 plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
      cex.axis = 1.5, cex.main = 2)
-
 #datExpr0 = resid
 cutoff_height = 160
 abline(h = cutoff_height, col = "red");
+```
+
+WGCNA tutorial suggests that we remove the two samples with very large distance... not sure how great of an idea that is.
+
+```{r}
+
+
 
 clust = cutreeStatic(sampleTree, cutHeight = cutoff_height, minSize = 10)
 
 keepSamples = (clust==1)
 datExpr = datExpr0[keepSamples, ]
-datTraits = datTraits[keepSamples, ]
+#datTraits = datTraits[keepSamples, ]
 nGenes = ncol(datExpr)
 nSamples = nrow(datExpr)
 
@@ -223,12 +212,12 @@ collectGarbage()
 
 enableWGCNAThreads()
 
+```
 
+Now its time to do the clustering. since we care about seperating negativly corrolated modules, we will use a signed network.
 
-
+```{r}
 network_type = 'signed'
-
-
 powers = c(1:40)
 
 sft = pickSoftThreshold(datExpr,
@@ -251,22 +240,14 @@ text(sft_table$median.k.,
      col="red");
 
 
-# should be 6, but i like 8
-
-#sft$powerEstimate = 6
-
 net = blockwiseModules(datExpr,
-                       power = sft$powerEstimate,
+                       power = sft$powerEstimate, # is 6 for my data
                        networType = network_type,
-                       # corType = 'bicor',
-                       # corOptions = list(maxPOutliers = 0.05),
                        minModuleSize = 4,
                        deepSplit = 2, # 4 is very strong, 2 gets the job done. not sure about 3
                        maxBlockSize = 30000,
                        numericLabels = TRUE,
                        pamRespectsDendro = FALSE,
-                       #saveTOMs = TRUE,
-                       #saveTOMFileBase = "kinaseTOM",
                        verbose = 3)
 
 moduleLabels = net$colors
@@ -275,28 +256,34 @@ moduleColors = labels2colors(moduleLabels)
 #table(moduleColors)
 #length(table(moduleColors))
 
-# [rm(list=setdiff(ls(), c("datExpr", "sft", "network_type", "t2g", "expr", "full_std_resid_matrix", "datTraits", "resid")))
-
-modules = tibble(module = as.character(moduleLabels),
-                 name = colnames(datExpr)) %>% group_by(module) %>% left_join(genes) %>% nest(.key = 'gene_data')
-
-                 
-
-```
-
-
-```{r}
-
+# In order to remove everything exept for cetrain variables run the following
+# rm(list=setdiff(ls(),
+#                 c("datExpr",
+#                   "sft",
+#                   "network_type",
+#                   "t2g"
+#                   "expr",
+#                   "full_std_resid_matrix",
+#                   "datTraits",
+#                   "resid")))
 
 MEs = net$MEs;
 
+modules = tibble(module = as.character(moduleLabels),
+                 name = colnames(datExpr)) %>%
+                 group_by(module)
 
-GOenr = GOenrichmentAnalysis(moduleLabels, yeastORFs = colnames(datExpr), organism = 'yeast')
-tab = GOenr$bestPTerms[[4]]$enrichment %>% group_by(module) %>% nest(.key = 'go_data')
+```
 
-modules %<>% left_join(tab)
-#all = modules %>% group_by(module) %>% nest(.key = gene_info) %>% full_join(tab %>% group_by(module) %>% nest(.key = go_info))
+Lets get go enrichment for each module
 
+```{r}
+GOenr = GOenrichmentAnalysis(modules$module, yeastORFs = modules$name, organism = 'yeast')
+
+modules = GOenr$bestPTerms[[4]]$enrichment %>%
+            group_by(module) %>%
+            nest(.key = 'go_data') %>%
+            right_join(modules)
 ```
 
 Now lets export the modules for meme analyisis
@@ -308,25 +295,25 @@ dir.create('WGCNA_modules')
 
 library(readr)
 
-write_genes = function(names, path){
-  write(names$name, file=path)
+write_genes = function(df){
+  print(class(df))
+  write(df$name, file = paste0('WGCNA_modules/cluster_', 
+                               unique(df$module),
+                               '.txt'))
 }
 
-modules %>% 
-  map(write_genes(.x$gene_data,
-                  path = paste0('WGCNA_modules/cluster_',
-                                as.character(unique(.$module)),
-                                '_genes.txt')))
-
-
-tab %>%
-  group_by(module) %>%
-  do(write_csv(., path = paste0('WGCNA_modules/cluster_',
-                                as.character(unique(.$module)),
-                                '_go_terms.csv')))
-
-
-# After meme is run:
+modules %>%
+  dplyr::select(module, name) %>%
+  split(.$module) -> test
+  #map(~ .x %>% dplyr::select(-module)) %>%
+lapply(test, write_genes)
+  #
+  #map(~write_genes(.x))#(.x %>% pull(), file = paste0('WGCNA_modules/cluster_',
+                    #                        as.character(.y),
+                    #                        '_genes.txt')))
+```
+  
+  # After meme is run:
 
 tfs = do.call(rbind,
 lapply(dir('WGCNA_modules/tfs/'),
@@ -353,5 +340,3 @@ return(r)
 }
 lasts = do.call(rbind, lapply(models$Full_model, getri))
 ```
-
-
