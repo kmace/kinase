@@ -1,0 +1,7 @@
+Here is a description of the directories in the src directory
+notebooks: documented experiments used to prove or disprove a hypothesis
+paper: code to fully generate the paper
+sci: scientific exploration and one off scripts
+scripts: scripts to generate intermediate data
+shiny_apps: interactive apps for data exploration
+utils: helper functions
