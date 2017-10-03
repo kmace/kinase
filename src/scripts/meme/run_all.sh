@@ -5,4 +5,4 @@ output_dir=$2
 
 mkdir -p ${output_dir}
 
-parallel bash run_meme.sh {} ${output_dir} ::: ${src_dir}/*.txt
+parallel bash src/scripts/meme/run_meme.sh {} ${output_dir} ::: ${src_dir}/*.txt
