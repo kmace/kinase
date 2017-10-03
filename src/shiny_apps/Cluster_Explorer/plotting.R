@@ -33,7 +33,34 @@ get_moduleSimilarity = function(m, MEsCor){
     coord_flip()
 }
 
-
+get_moduleWeightDistribution = function(m, weights){
+  # For reference, this is the structure of weights since I havent made it yet
+  # A tibble: 5,308 x 3
+#       Gene module               weights
+#      <chr>  <int>                <list>
+#  1 YAL012W     81 <data.frame [38 x 5]>
+#  2 YAL067C     39 <data.frame [38 x 5]>
+#  3 YAL063C      5 <data.frame [38 x 5]>
+#  4 YAL062W     62 <data.frame [38 x 5]>
+#  5 YAL061W     73 <data.frame [38 x 5]>
+#  6 YAL060W     70 <data.frame [38 x 5]>
+#  7 YAL059W     67 <data.frame [38 x 5]>
+#  8 YAL058W     16 <data.frame [38 x 5]>
+#  9 YAL056W      1 <data.frame [38 x 5]>
+# 10 YAL055W     44 <data.frame [38 x 5]>
+# ... with 5,298 more rows
+  weights %>%
+    filter(module == m) %>%
+    unnest() %>%
+    mutate(term_type = str_extract(term, "[SC][a-z]*"),
+           term_name = str_replace(term, term_type, '')) %>%
+    ggplot(aes(x = term_name,
+               y = estimate,
+               fill = term_type)) +
+    geom_violin() +
+    facet_wrap(~term_type, ncol = 1, scales='free') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
 
 get_moduleExpression = function(m, module_raw_residuals){
   module_raw_residuals %>%
