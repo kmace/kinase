@@ -369,7 +369,8 @@ save(list = c('std_resid_matrix',
               'genes',
               'meta',
               'modules',
-              'sample_tsne'),
+              'sample_tsne',
+              't2g'),
      file = '../../intermediate/images/paper_data.RData')
 ```
 

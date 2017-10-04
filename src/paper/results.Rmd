@@ -1,7 +1,7 @@
 # Results:
 
 ```{r results_setup, echo=FALSE, message=FALSE}
-library(ggplot2)
+library(tidyverse)
 load('../../intermediate/images/paper_data.RData')
 ```
 
@@ -146,7 +146,7 @@ Now that we have the standardized residuals, lets take a look at them. What stru
 First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that they are normally distributed. lets check:
 
 ```{r}
-resids = std_residuals %>% filter(residual_type == 'Full') %>% pull(residual) 
+resids = std_residuals  %>% pull(residual) 
 hist(resids, breaks = 200)
 ```
 
@@ -166,9 +166,7 @@ We extract measurements that have the largest residuals, and look at the experim
 
 ```{r, warning=FALSE, message=FALSE}
 std_residuals %>%
-  filter(residual_type == 'Full') %>% 
   arrange(-abs(residual)) %>% 
-  select(-residual_type) %>% 
   left_join(t2g %>% select(Gene, name, description)) %>%
   separate(sample_id,c('Condition','Strain'), sep='_') -> hypotheses
 
