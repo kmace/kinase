@@ -291,32 +291,50 @@ Now lets export the modules for meme analyisis
 ```{r}
 
 
-dir.create('WGCNA_modules')
+output_dir = '../../intermediate/clusters/WGCNA_modules'
+dir.create(output_dir)
 
 library(readr)
 
 write_genes = function(df){
-  print(class(df))
-  write(df$name, file = paste0('WGCNA_modules/cluster_', 
-                               unique(df$module),
-                               '.txt'))
+  write(df$name, 
+        file = paste0(output_dir,
+                      '/cluster_', 
+                      unique(df$module),
+                      '.txt')
+        )
 }
 
 modules %>%
   dplyr::select(module, name) %>%
-  split(.$module) -> test
+  split(.$module) -> by_module
   #map(~ .x %>% dplyr::select(-module)) %>%
-lapply(test, write_genes)
+lapply(by_module, write_genes)
   #
   #map(~write_genes(.x))#(.x %>% pull(), file = paste0('WGCNA_modules/cluster_',
                     #                        as.character(.y),
                     #                        '_genes.txt')))
 ```
   
+  
+  Run MEME
+
+```{bash}
+cd ../../
+bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA_modules intermediate/meme/WGCNA
+```
+
+
+
+  
+  
   # After meme is run:
+```{r}
+
+```
 
 tfs = do.call(rbind,
-lapply(dir('WGCNA_modules/tfs/'),
+lapply(dir('../../intermediate/meme/WGCNA_modules/tfs/'),
 function(x) {
 if(file.size(paste0('WGCNA_modules/tfs/', x)) > 0) {
 return(data.frame(file = x, TF = read.table(paste0('WGCNA_modules/tfs/',x), stringsAsFactors = F)))
