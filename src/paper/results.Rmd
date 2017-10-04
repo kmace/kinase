@@ -1,8 +1,8 @@
 # Results:
 
 ```{r results_setup, echo=FALSE, message=FALSE}
-library(tidyverse)
-load('../../input/images/paper_data.RData')
+library(ggplot2)
+load('../../intermediate/images/paper_data.RData')
 ```
 
 ## A strategy to explore Kinome wide signaling under stress

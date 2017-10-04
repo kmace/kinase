@@ -10,7 +10,7 @@ This notebook takes us from the DESeq2 normalized data, to all the data that is 
 
 rm(list=ls())
 
-load('../../input/images/normalized_data.RData')
+load('../../intermediate/images/normalized_data.RData')
 
 library(tidyr)
 library(purrr)
@@ -98,11 +98,17 @@ genes %<>%
 
 lets look at model performance, and figure out where our model breaks:
 
-```{r}
-genes %>% select(Gene_mean, performance) %>% unnest() %>% ggplot(aes(x=Gene_mean, y = r.squared)) + geom_point() + geom_vline(xintercept = 6) # TODO change this all to 5.5
+```{r model_performance}
+library(ggplot2)
+genes %>% 
+  select(Gene_mean, performance) %>% 
+  unnest() %>%
+ggplot(aes(x=Gene_mean, y = r.squared)) + 
+  geom_point() + 
+  geom_vline(xintercept = 6) # TODO change this all to 5.5
 ```
 
-It seems $R^2$ looks pretty bad when gene mean is below 5.5, probably becuase these genes are dominated by noise. lets therefore filter them out:
+It seems $R^2$ looks pretty bad when gene mean is below 5.5, probably becuase these genes are dominated by noise. lets therefore filter them out, and be save by filtering at 6:
 
 ```{r gene_filter}
 genes %<>%
@@ -143,7 +149,7 @@ sample_tsne = do_tsne(gene_matrix %>% select(-Gene))
 
 
 
-Now lets extract the residuals for each model into it's own wide matrix
+Now lets extract the residuals for each gene model into it's own row in a wide matrix
 
 ```{r extract_residuals}
 std_residuals = genes %>%
@@ -165,21 +171,25 @@ std_resid_matrix = std_residuals %>%
 ```
 
 Lets sort the genes into clusters by clustering on significantly large residuals: TODO decide if we should also include the weights as additional columns to cluster on?
+
+Also, since small residuals are not significant, we will reduce any residual smaller than +/-2 to zero
 ```{r}
 library(WGCNA)
 resid = t(std_resid_matrix)
-#datTraits = tibble(Experiment = rownames(resid)) %>% separate(Experiment, c('Strain_Code', 'Condition'), '_', remove = F)
 resid[abs(resid)<2] = 0
-datExpr0 = resid
 
-sampleTree = hclust(dist(datExpr0), method = "average");
+sampleTree = hclust(dist(resid), method = "average");
 sizeGrWindow(12,9)
-#pdf(file = "Plots/sampleClustering.pdf", width = 12, height = 9);
 par(cex = 0.6);
 par(mar = c(0,4,2,0))
-plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
-     cex.axis = 1.5, cex.main = 2)
-#datExpr0 = resid
+plot(sampleTree, 
+     main = "Sample clustering to detect outliers", 
+     sub="", 
+     xlab="", 
+     cex.lab = 1.5,
+     cex.axis = 1.5, 
+     cex.main = 2)
+
 cutoff_height = 160
 abline(h = cutoff_height, col = "red");
 ```
@@ -187,40 +197,40 @@ abline(h = cutoff_height, col = "red");
 WGCNA tutorial suggests that we remove the two samples with very large distance... not sure how great of an idea that is.
 
 ```{r}
-
-
-
-clust = cutreeStatic(sampleTree, cutHeight = cutoff_height, minSize = 10)
+clust = cutreeStatic(sampleTree, 
+                     cutHeight = 
+                       cutoff_height, 
+                     minSize = 10)
 
 keepSamples = (clust==1)
-datExpr = datExpr0[keepSamples, ]
-#datTraits = datTraits[keepSamples, ]
-nGenes = ncol(datExpr)
-nSamples = nrow(datExpr)
+resid = resid[keepSamples, ]
+nGenes = ncol(resid)
+nSamples = nrow(resid)
 
 
-sampleTree = hclust(dist(datExpr), method = "average");
+sampleTree = hclust(dist(resid), method = "average");
 sizeGrWindow(12,9)
-#pdf(file = "Plots/sampleClustering.pdf", width = 12, height = 9);
 par(cex = 0.6);
 par(mar = c(0,4,2,0))
-plot(sampleTree, main = "Sample clustering to check no outliers", sub="", xlab="", cex.lab = 1.5,
-     cex.axis = 1.5, cex.main = 2)
-
-
-collectGarbage()
-
-enableWGCNAThreads()
-
+plot(sampleTree, 
+     main = "Sample clustering with outliers removed", 
+     sub="", 
+     xlab="", 
+     cex.lab = 1.5,
+     cex.axis = 1.5, 
+     cex.main = 2)
 ```
 
 Now its time to do the clustering. since we care about seperating negativly corrolated modules, we will use a signed network.
 
 ```{r}
+collectGarbage()
+enableWGCNAThreads()
+
 network_type = 'signed'
 powers = c(1:40)
 
-sft = pickSoftThreshold(datExpr,
+sft = pickSoftThreshold(resid,
                         powerVector = powers,
                         verbose = 5,
                         # corFnc = bicor,
@@ -240,7 +250,7 @@ text(sft_table$median.k.,
      col="red");
 
 
-net = blockwiseModules(datExpr,
+net = blockwiseModules(resid,
                        power = sft$powerEstimate, # is 6 for my data
                        networType = network_type,
                        minModuleSize = 4,
@@ -253,37 +263,40 @@ net = blockwiseModules(datExpr,
 moduleLabels = net$colors
 moduleColors = labels2colors(moduleLabels)
 
-#table(moduleColors)
-#length(table(moduleColors))
-
-# In order to remove everything exept for cetrain variables run the following
-# rm(list=setdiff(ls(),
-#                 c("datExpr",
-#                   "sft",
-#                   "network_type",
-#                   "t2g"
-#                   "expr",
-#                   "full_std_resid_matrix",
-#                   "datTraits",
-#                   "resid")))
-
-MEs = net$MEs;
-
 modules = tibble(module = as.character(moduleLabels),
-                 name = colnames(datExpr)) %>%
-                 group_by(module)
+                 name = colnames(resid)) %>%
+                    group_by(module) %>%
+                    nest(.key = genes)
+                
 
 ```
 
-Lets get go enrichment for each module
-
+Lets get eigengene for each module
 ```{r}
-GOenr = GOenrichmentAnalysis(modules$module, yeastORFs = modules$name, organism = 'yeast')
+MEs = as.tibble(net$MEs);
+MEs$sample = rownames(resid)
+MEs = MEs %>% 
+  gather(key = module_label, value = sample_loading, -sample) %>%
+  group_by(module_label) %>% 
+  nest(.key = eigengene) %>%
+  mutate(module = gsub('ME','',module_label)) 
 
-modules = GOenr$bestPTerms[[4]]$enrichment %>%
+modules = modules %>%
+            left_join(MEs)
+
+rm(MEs)
+```
+Lets get go enrichment for each module
+```{r}
+GOenr = GOenrichmentAnalysis(moduleLabels, yeastORFs = colnames(resid), organism = 'yeast')
+tab = GOenr$bestPTerms[[4]]$enrichment %>%
             group_by(module) %>%
-            nest(.key = 'go_data') %>%
-            right_join(modules)
+            nest(.key = 'go_data')
+
+
+modules = modules %>%
+            left_join(tab)
+rm(tab)
 ```
 
 Now lets export the modules for meme analyisis
@@ -291,7 +304,7 @@ Now lets export the modules for meme analyisis
 ```{r}
 
 
-dir.create('WGCNA_modules')
+dir.create('../../intermediate/clusters/WGCNA_modules')
 
 library(readr)
 
@@ -307,11 +320,7 @@ modules %>%
   split(.$module) -> test
   #map(~ .x %>% dplyr::select(-module)) %>%
 lapply(test, write_genes)
-  #
-  #map(~write_genes(.x))#(.x %>% pull(), file = paste0('WGCNA_modules/cluster_',
-                    #                        as.character(.y),
-                    #                        '_genes.txt')))
-```
+
   
   # After meme is run:
 
