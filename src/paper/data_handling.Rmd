@@ -260,6 +260,9 @@ net = blockwiseModules(resid,
                        pamRespectsDendro = FALSE,
                        verbose = 3)
 
+```
+
+```{r}
 moduleLabels = net$colors
 moduleColors = labels2colors(moduleLabels)
 
@@ -302,15 +305,13 @@ rm(tab)
 Now lets export the modules for meme analyisis
 
 ```{r}
-
-
-
-output_dir = '../../intermediate/clusters/WGCNA_modules'
-dir.create(output_dir)
+cluster_dir = '../../intermediate/clusters/WGCNA'
+output_dir = paste0(cluster_dir, '/gene_lists')
+dir.create(output_dir, recursive = TRUE)
 
 library(readr)
 
-write_genes = function(df){
+write_genes = function(df, output_dir){
   write(df$name, 
         file = paste0(output_dir,
                       '/cluster_', 
@@ -322,7 +323,8 @@ write_genes = function(df){
 modules %>%
   dplyr::select(module, genes) %>% unnest() %>%
   split(.$module) -> by_module
-  lapply(by_module, write_genes)
+
+lapply(by_module, function(x) write_genes(x, output_dir))
 
 ```
 
@@ -330,8 +332,8 @@ modules %>%
   Run MEME
 
 ```{bash}
-cd ../../
-bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA_modules intermediate/meme/WGCNA
+bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermediate/clusters/WGCNA
+
 ```
 
 
@@ -341,30 +343,41 @@ bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA_modules intermediat
   # After meme is run:
 ```{r}
 
-```
-
 tfs = do.call(rbind,
-lapply(dir('../../intermediate/meme/WGCNA_modules/tfs/'),
+lapply(dir(paste0(cluster_dir, '/tfs/')),
 function(x) {
-if(file.size(paste0('WGCNA_modules/tfs/', x)) > 0) {
-return(data.frame(file = x, TF = read.table(paste0('WGCNA_modules/tfs/',x), stringsAsFactors = F)))
-}})) %>% as_tibble %>% separate(file, c('c', 'module', 't'), sep = '_') %>% dplyr::rename(TF = V1) %>% dplyr::select(module, TF)
+  path = paste0(cluster_dir, '/tfs/', x)
+  if(file.size(path) > 0) {
+    return(data.frame(file = x, 
+                      TF = read.table(path, stringsAsFactors = F))
+           )
+  }
+})) %>% as_tibble %>% separate(file, c('c', 'module', 't'), sep = '_') %>% dplyr::rename(TF = V1) %>% dplyr::select(module, TF) %>% group_by(module) %>% nest(.key = TFs)
 
+modules = modules %>%
+  left_join(tfs)
 
+rm(tfs)
 
 ```
 
 
 
 ```{r data_saving}
-save.image('../../input/images/paper_data.RData')
+save(list = c('std_resid_matrix', 
+              'std_residuals',
+              'genes',
+              'meta',
+              'modules',
+              'sample_tsne'),
+     file = '../../intermediate/images/paper_data.RData')
 ```
 
 ```{r relative_importance}
-library(relaimpo)
-getri = function(mod){
-r = calc.relimp(mod, type = c('last'))@last
-return(r)
-}
-lasts = do.call(rbind, lapply(models$Full_model, getri))
+# library(relaimpo)
+# getri = function(mod){
+# r = calc.relimp(mod, type = c('last'))@last
+# return(r)
+# }
+# lasts = do.call(rbind, lapply(models$Full_model, getri))
 ```
