@@ -45,7 +45,7 @@ measurements %<>% filter(Strain_Code != 'WT1' | Condition != 'Rapamycin')
 
 Next lets calculate some base statistics and define outliers:
 
-```{r call_outlier}
+```{r gene_statistics}
 
 is_outlier <- function(v, coef=1.5){
   quantiles <- quantile(v,probs=c(0.25,0.75))
@@ -67,9 +67,7 @@ measurements = measurements %>% group_by(Gene, Condition) %>%
                                                as.character(Condition),
                                                NA)) %>%
                 ungroup()
-```
 
-```{r gene_statistics}
 genes = measurements %>%
   group_by(Gene) %>%
   mutate(Differential_Expression = Expression - mean(Expression),
@@ -100,11 +98,11 @@ lets look at model performance, and figure out where our model breaks:
 
 ```{r model_performance}
 library(ggplot2)
-genes %>% 
-  select(Gene_mean, performance) %>% 
+genes %>%
+  select(Gene_mean, performance) %>%
   unnest() %>%
-ggplot(aes(x=Gene_mean, y = r.squared)) + 
-  geom_point() + 
+ggplot(aes(x=Gene_mean, y = r.squared)) +
+  geom_point() +
   geom_vline(xintercept = 6) # TODO change this all to 5.5
 ```
 
@@ -182,12 +180,12 @@ sampleTree = hclust(dist(resid), method = "average");
 sizeGrWindow(12,9)
 par(cex = 0.6);
 par(mar = c(0,4,2,0))
-plot(sampleTree, 
-     main = "Sample clustering to detect outliers", 
-     sub="", 
-     xlab="", 
+plot(sampleTree,
+     main = "Sample clustering to detect outliers",
+     sub="",
+     xlab="",
      cex.lab = 1.5,
-     cex.axis = 1.5, 
+     cex.axis = 1.5,
      cex.main = 2)
 
 cutoff_height = 160
@@ -197,9 +195,9 @@ abline(h = cutoff_height, col = "red");
 WGCNA tutorial suggests that we remove the two samples with very large distance... not sure how great of an idea that is.
 
 ```{r}
-clust = cutreeStatic(sampleTree, 
-                     cutHeight = 
-                       cutoff_height, 
+clust = cutreeStatic(sampleTree,
+                     cutHeight =
+                       cutoff_height,
                      minSize = 10)
 
 keepSamples = (clust==1)
@@ -212,12 +210,12 @@ sampleTree = hclust(dist(resid), method = "average");
 sizeGrWindow(12,9)
 par(cex = 0.6);
 par(mar = c(0,4,2,0))
-plot(sampleTree, 
-     main = "Sample clustering with outliers removed", 
-     sub="", 
-     xlab="", 
+plot(sampleTree,
+     main = "Sample clustering with outliers removed",
+     sub="",
+     xlab="",
      cex.lab = 1.5,
-     cex.axis = 1.5, 
+     cex.axis = 1.5,
      cex.main = 2)
 ```
 
@@ -270,7 +268,7 @@ modules = tibble(module = as.character(moduleLabels),
                  name = colnames(resid)) %>%
                     group_by(module) %>%
                     nest(.key = genes)
-                
+
 
 ```
 
@@ -278,11 +276,11 @@ Lets get eigengene for each module
 ```{r}
 MEs = as.tibble(net$MEs);
 MEs$sample = rownames(resid)
-MEs = MEs %>% 
+MEs = MEs %>%
   gather(key = module_label, value = sample_loading, -sample) %>%
-  group_by(module_label) %>% 
+  group_by(module_label) %>%
   nest(.key = eigengene) %>%
-  mutate(module = gsub('ME','',module_label)) 
+  mutate(module = gsub('ME','',module_label))
 
 modules = modules %>%
             left_join(MEs)
@@ -312,9 +310,9 @@ dir.create(output_dir, recursive = TRUE)
 library(readr)
 
 write_genes = function(df, output_dir){
-  write(df$name, 
+  write(df$name,
         file = paste0(output_dir,
-                      '/cluster_', 
+                      '/cluster_',
                       unique(df$module),
                       '.txt')
         )
@@ -328,7 +326,7 @@ lapply(by_module, function(x) write_genes(x, output_dir))
 
 ```
 
-  
+
   Run MEME
 
 ```{bash}
@@ -338,8 +336,8 @@ bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermed
 
 
 
-  
-  
+
+
   # After meme is run:
 ```{r}
 
@@ -348,7 +346,7 @@ lapply(dir(paste0(cluster_dir, '/tfs/')),
 function(x) {
   path = paste0(cluster_dir, '/tfs/', x)
   if(file.size(path) > 0) {
-    return(data.frame(file = x, 
+    return(data.frame(file = x,
                       TF = read.table(path, stringsAsFactors = F))
            )
   }
@@ -364,7 +362,7 @@ rm(tfs)
 
 
 ```{r data_saving}
-save(list = c('std_resid_matrix', 
+save(list = c('std_resid_matrix',
               'std_residuals',
               'genes',
               'meta',

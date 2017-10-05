@@ -7,12 +7,12 @@ load('../../intermediate/images/paper_data.RData')
 
 ## A strategy to explore Kinome wide signaling under stress
 
-Kinases are largely responsible for mediating environmental information to the nucleus where an adaptive transcriptional response can be made. The propogation of this information occurs through a pathways of cascading phosporylation events. Here we use strains with analog sensisitive mutatants of certain stress associated kinases to block kinase signalling while under a variety of stress. The resulting change in gene expression is then measured using RNA-seq and analyzed.
+Kinases are largely responsible for mediating environmental information to the nucleus where an adaptive transcriptional response can be made. The propagation of this information occurs through a pathways of cascading phosphorylation events. Here we use strains with analog sensitive mutants of certain stress associated kinases to block kinase signaling while under a variety of stress. The resulting change in gene expression is then measured using RNA-seq and analyzed.
 
 ![](img/Experiment_Cartoon.png)
 
 ### Experimental Details:
-28 Stress assocated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by rna-seq.
+28 Stress associated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by RNA-seq.
 
 
 ### Analysis Details:
@@ -23,17 +23,28 @@ Reads were then aligned and normalized, then a linear model was created for each
 
 #### Data Loading and Normalization:
 
-Data is aligned with STAR, and then expression levels are normalized using DESeq's variance stabilizing transformation. It is then loaded in for analysis. (see the [supplement](#Supplement) specifically [here](## Sequence Alignment, Normalization, and Transformation:) for how its done)
+Data is aligned with STAR, and then expression levels are normalized using the variance stabilizing transformation from the DESeq2 package. It is then loaded in for analysis. (see the [supplement](#Supplement) specifically [here](##Sequence-Alignment,-Normalization,-and-Transformation:) for how its done)
 
 
-```{r ref.label= 'data_loading', eval=FALSE}
+```{r ref.label='data_loading', eval=FALSE}
 ```
 
-### Calculation of statistics, and filtering:
+### Calculation of gene statistics, and filtering:
 
-We then calculate basic statistics on the gene expression data:
+We then calculate basic statistics on the gene level, this includes:
+1. Condition outliers
+2. Kinase outliers
+3. Representations of expression levels
+4. Basic statistics
 
 ```{r ref.label='gene_statistics', eval=FALSE}
+```
+
+Next we create a linear model for each gene, using the `Condition` and `Kinase` as predictor variables to predict `Expression` as an output variable. The linear model has the form `Expression ~ Kinase + Condition + Intercept`.
+
+We also simultaniously collect model weights, model performance, and residuals.
+
+```{r ref.label='creat_linear_models', eval=FALSE}
 ```
 
 Genes with no variability will be problematic in downstream analysis. As we can infer very little about these genes, it is appropriate to filter them out. We will arbitrarily filter out genes that have a dynamic range is less than 1 in all the samples. as well as genes that have a low level of counts (Mean expression < 2^6 == 64 Counts)
