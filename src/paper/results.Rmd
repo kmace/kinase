@@ -7,23 +7,21 @@ load('../../intermediate/images/paper_data.RData')
 
 ## A strategy to explore Kinome wide signaling under stress
 
-### General Overview:
-
-Kinases are largely responsicble for mediating information from the environment to the nucleous where decisions are made. Here we use analog sensisitive mutatants of kinases involved in dynamic regualtion of stress response pathways to probe the kinase's activity and contribution during stresses. 
-
-### Strategy
-
-28 Stress assocated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by rna-seq. 
-
-#### Experimental Cartoon:
+Kinases are largely responsible for mediating environmental information to the nucleus where an adaptive transcriptional response can be made. The propogation of this information occurs through a pathways of cascading phosporylation events. Here we use strains with analog sensisitive mutatants of certain stress associated kinases to block kinase signalling while under a variety of stress. The resulting change in gene expression is then measured using RNA-seq and analyzed.
 
 ![](img/Experiment_Cartoon.png)
 
-#### Analysis Pipeline:
+### Experimental Details:
+28 Stress assocated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by rna-seq.
+
+
+### Analysis Details:
+
+Reads were then aligned and normalized, then a linear model was created for each gene with Kinase and Condition as predictor variables. Predictor weights were used to ...., and large residuals profiles were clustered then analyzed to generate hypothetical condition kinase interactions.
 
 ![](img/Kinase_Pipeline.png)
 
-### Data Loading and Normalization:
+#### Data Loading and Normalization:
 
 Data is aligned with STAR, and then expression levels are normalized using DESeq's variance stabilizing transformation. It is then loaded in for analysis. (see the [supplement](#Supplement) specifically [here](## Sequence Alignment, Normalization, and Transformation:) for how its done)
 
@@ -60,9 +58,9 @@ library(ggrepel)
 select = dplyr::select
 tsne_plot = function(df){
 ggplot(df,
-       aes(x=TSNE1, 
-           y=TSNE2, 
-           color = Condition, 
+       aes(x=TSNE1,
+           y=TSNE2,
+           color = Condition,
            label = Strain_Code)) +
   geom_point(size=4) +
   geom_text_repel(size = 2,
@@ -117,11 +115,11 @@ Currently, we just show the data ordered by Stress, or Kinase
 \newpage
 
 
-### Global analyisis of gene expression profiles reveals condition, kinase, and context depedent samples. 
+### Global analyisis of gene expression profiles reveals condition, kinase, and context depedent samples.
 
 ## Global clustering of samples reveal condition, kinase, and context specific groups
 ## Error's in simple linear model reveal conetext dependent regulation.
-## Gene error modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.  
+## Gene error modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -146,7 +144,7 @@ Now that we have the standardized residuals, lets take a look at them. What stru
 First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that they are normally distributed. lets check:
 
 ```{r}
-resids = std_residuals  %>% pull(residual) 
+resids = std_residuals  %>% pull(residual)
 hist(resids, breaks = 200)
 ```
 
@@ -166,7 +164,7 @@ We extract measurements that have the largest residuals, and look at the experim
 
 ```{r, warning=FALSE, message=FALSE}
 std_residuals %>%
-  arrange(-abs(residual)) %>% 
+  arrange(-abs(residual)) %>%
   left_join(t2g %>% select(Gene, name, description)) %>%
   separate(sample_id,c('Condition','Strain'), sep='_') -> hypotheses
 
@@ -182,11 +180,11 @@ write.csv(hypotheses, file = 'hypotheses.csv')
 Next, lets see what `Condition + Strain` pairs contain significant residuals over all genes in the ESR:
 
 ```{r}
-hypotheses %>% 
-  filter(abs(residual) > 3) %>% 
+hypotheses %>%
+  filter(abs(residual) > 3) %>%
   filter(Gene %in% c(scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', what = character()),
                      scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', what = character()))) %>%
-  select(Condition, Strain) %>% 
+  select(Condition, Strain) %>%
   table() %>%
   `+`(1) %>%
   log() %>%
@@ -205,17 +203,17 @@ hypotheses %>%
 Okay, so if the findings above are true, we should see that the residuals between PBS2, and HOG1 to correlate for genes that have significant residuals. lets check that now:
 
 ```{r, warning=FALSE}
-p = hypotheses %>% 
-    filter(abs(residual) > 3) %>% 
-    filter(Strain %in% c('HOG1', 'PBS2')) %>% 
-  select(name, residual, Strain, Condition) %>% 
-  spread(Strain, residual) %>% 
-  mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% 
-  ggplot(aes(x=HOG1,y=PBS2,fill=Condition,color = Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
+p = hypotheses %>%
+    filter(abs(residual) > 3) %>%
+    filter(Strain %in% c('HOG1', 'PBS2')) %>%
+  select(name, residual, Strain, Condition) %>%
+  spread(Strain, residual) %>%
+  mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>%
+  ggplot(aes(x=HOG1,y=PBS2,fill=Condition,color = Condition, text= paste(name, Condition, sep='_'))) + geom_point()
 plotly::ggplotly(p, width = 880)
 ```
 
-Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals. They do for Salt, but do not for Menadione, and Glucose Dropout. This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions. 
+Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals. They do for Salt, but do not for Menadione, and Glucose Dropout. This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions.
 
 
 
@@ -229,24 +227,24 @@ We see this phenomenon in our data:
 
 
 ```{r}
-hypotheses %>% 
-  filter(name == 'FUS1') %>% 
-  select(Strain, Condition, residual) %>% 
-  group_by(Strain, Condition) %>% 
-  summarise_all(mean) %>% 
+hypotheses %>%
+  filter(name == 'FUS1') %>%
+  select(Strain, Condition, residual) %>%
+  group_by(Strain, Condition) %>%
+  summarise_all(mean) %>%
   ggplot(aes(x = Strain, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('FUS1')
 
-hypotheses %>% 
-  filter(name == 'AGA1') %>% 
-  select(Strain, Condition, residual) %>% 
-  group_by(Strain, Condition) %>% 
-  summarise_all(mean) %>% 
+hypotheses %>%
+  filter(name == 'AGA1') %>%
+  select(Strain, Condition, residual) %>%
+  group_by(Strain, Condition) %>%
+  summarise_all(mean) %>%
   ggplot(aes(x = Strain, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('AGA1')
 
 ```
 
 
-Although we do not have replicates of these residuals, we can become more confident in our prediction if we see a similar pattern in the whole mating pathway. 
+Although we do not have replicates of these residuals, we can become more confident in our prediction if we see a similar pattern in the whole mating pathway.
 
 To define a pathway, we use INSPIRE to cluster genes using other datatsets.
 
@@ -258,11 +256,11 @@ I happen to know that FUS1 cluster is cluster 36 in this dataset, which I hope w
 ```{r}
 clusters_inspire = read.csv('../../input/clusters/INSPIRE_clusters/all_clusters.csv')
 want = clusters_inspire %>% filter(Cluster==36) %>% select(Gene)
-hypotheses %>% 
-  filter(Gene %in% want$Gene) %>% 
-  select(Strain, Condition, residual) %>% 
-  group_by(Strain, Condition) %>% 
-  summarise_all(mean) %>% 
+hypotheses %>%
+  filter(Gene %in% want$Gene) %>%
+  select(Strain, Condition, residual) %>%
+  group_by(Strain, Condition) %>%
+  summarise_all(mean) %>%
   ggplot(aes(x = Strain, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
@@ -297,8 +295,8 @@ print_out_terms = function(g_dir){
     dplyr::mutate(pval = min(over_represented_pvalue, under_represented_pvalue),
                   percent_in = numDEInCat / numInCat) %>%
     dplyr::arrange(pval) %>%
-    dplyr::filter(pval<0.001) %>% 
-    dplyr::select(term, pval, percent_in) %>% 
+    dplyr::filter(pval<0.001) %>%
+    dplyr::select(term, pval, percent_in) %>%
     arrange(-percent_in, pval) %>%
     head() %>% kable()
 }
@@ -329,7 +327,7 @@ print_out_terms(g)
 RNA-seq Evidence: Lower GSR (PC1) Expression in stress with PBS2 strain
 
 ```{r}
-ggplot(sample_tsne, aes(x = PC1, y = PC2, color = Strain=='PBS2')) + geom_point() + facet_wrap(~Condition) 
+ggplot(sample_tsne, aes(x = PC1, y = PC2, color = Strain=='PBS2')) + geom_point() + facet_wrap(~Condition)
 ```
 
 #### Idea:
@@ -379,7 +377,7 @@ PBS2 has a role that is HOG1 independent. this is motivated by differences in ge
 
 ```{r}
 sample_tsne %>% mutate(strain_of_interest = ifelse(Strain %in% c('HOG1', 'PBS2'), Strain, 'Other')) %>%
-ggplot(aes(x = PC1, y = PC2, color = strain_of_interest)) + geom_point() + facet_wrap(~Condition) 
+ggplot(aes(x = PC1, y = PC2, color = strain_of_interest)) + geom_point() + facet_wrap(~Condition)
 ```
 
 

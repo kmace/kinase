@@ -4,3 +4,9 @@
 .directory
 .Rproj.user
 *.pdf
+
+*.html
+
+*.dcf
+
+*.RData
