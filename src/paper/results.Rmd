@@ -1,60 +1,8 @@
 # Results:
 
-```{r results_setup, echo=FALSE, message=FALSE}
-library(tidyverse)
-load('../../intermediate/images/paper_data.RData')
-```
+## Clustering of samples shows distinct kinases, and condition, and pathway specific groups
 
-## A strategy to explore Kinome wide signaling under stress
-
-Kinases are largely responsible for mediating environmental information to the nucleus where an adaptive transcriptional response can be made. The propagation of this information occurs through a pathways of cascading phosphorylation events. Here we use strains with analog sensitive mutants of certain stress associated kinases to block kinase signaling while under a variety of stress. The resulting change in gene expression is then measured using RNA-seq and analyzed.
-
-![](img/Experiment_Cartoon.png)
-
-### Experimental Details:
-28 Stress associated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by RNA-seq.
-
-
-### Analysis Details:
-
-Reads were then aligned and normalized, then a linear model was created for each gene with Kinase and Condition as predictor variables. Predictor weights were used to ...., and large residuals profiles were clustered then analyzed to generate hypothetical condition kinase interactions.
-
-![](img/Kinase_Pipeline.png)
-
-#### Data Loading and Normalization:
-
-Data is aligned with STAR, and then expression levels are normalized using the variance stabilizing transformation from the DESeq2 package. It is then loaded in for analysis. (see the [supplement](#Supplement) specifically [here](##Sequence-Alignment,-Normalization,-and-Transformation:) for how its done)
-
-
-```{r ref.label='data_loading', eval=FALSE}
-```
-
-### Calculation of gene statistics, and filtering:
-
-We then calculate basic statistics on the gene level, this includes:
-1. Condition outliers
-2. Kinase outliers
-3. Representations of expression levels
-4. Basic statistics
-
-```{r ref.label='gene_statistics', eval=FALSE}
-```
-
-Next we create a linear model for each gene, using the `Condition` and `Kinase` as predictor variables to predict `Expression` as an output variable. The linear model has the form `Expression ~ Kinase + Condition + Intercept`.
-
-We also simultaniously collect model weights, model performance, and residuals.
-
-```{r ref.label='creat_linear_models', eval=FALSE}
-```
-
-Genes with no variability will be problematic in downstream analysis. As we can infer very little about these genes, it is appropriate to filter them out. We will arbitrarily filter out genes that have a dynamic range is less than 1 in all the samples. as well as genes that have a low level of counts (Mean expression < 2^6 == 64 Counts)
-
-```{r ref.label='gene_filter', eval=FALSE}
-```
-
-### Clustering of samples shows distinct kinases, and condition, and epistatic groups
-
-#### Clustering with TSNE
+### Clustering with TSNE
 
 There are 300 samples, each with an applied condition, kinase inhibition, and a gene expression vector. Here, we cluster the samples by performing t-SNE on gene expression vectors with default t-SNE parameters
 
@@ -83,33 +31,11 @@ tsne_plot(sample_tsne %>% filter(grepl('WT', Strain_Code))) + ggtitle('just WT')
 tsne_plot(sample_tsne)
 ```
 
-#### Full dataset heatmap
+### Full dataset heatmap
 
 Using these groups, we order the samples in terms of their cluster, and show the full heatmap.
 
 TODO: Define tsne clusters, and then show the clusters in a morpheous image
-
-<!-- heirarchically clustering the t-SNE projections: -->
-
-<!-- ```{r, echo = -1, message=FALSE} -->
-<!-- # library(dendextend) -->
-<!-- # -->
-<!-- # dend = sample_tsne %>% -->
-<!-- #   select(starts_with('TSNE')) %>% # Select the TSNE variables -->
-<!-- #   dist() %>% # Euclidean distance -->
-<!-- #   hclust() %>% # Heirarchical Clustering -->
-<!-- #   as.dendrogram() -->
-<!-- # -->
-<!-- # the_bars = cbind(factor(sample_tsne$Condition), -->
-<!-- #                  factor(sample_tsne$Strain)) -->
-<!-- # -->
-<!-- # plot(dend) -->
-<!-- # colored_bars(colors = the_bars, -->
-<!-- #              dend = dend, -->
-<!-- #              sort_by_labels_order = TRUE) -->
-<!-- # -->
-<!-- ``` -->
-
 
 Currently, we just show the data ordered by Stress, or Kinase
 
@@ -126,9 +52,46 @@ Currently, we just show the data ordered by Stress, or Kinase
 \newpage
 
 
-### Global analyisis of gene expression profiles reveals condition, kinase, and context depedent samples.
 
-## Global clustering of samples reveal condition, kinase, and context specific groups
+## A strategy to explore Kinome wide signaling under stress
+
+Kinases are largely responsible for mediating environmental information to the nucleus where an adaptive transcriptional response can be made.
+The propagation of this information occurs through a pathways of cascading phosphorylation events.
+Here we use strains with analog sensitive mutants of certain stress associated kinases to block kinase signaling while under a variety of stress.
+The resulting change in gene expression is then measured using RNA-seq and analyzed.
+
+From this data we hope to characterize three sets of attributes for each gene.
+1. The general effect a condition has on the genes
+2. The general effect the inhibition of a kinase has on the gene.
+3. specific instancs of condition + kinase-inhibition pairs that do not conform to the addition of their general effects
+
+To atchieve this we create a linear model for each gene, using the `Condition` and `Kinase` as predictor variables to predict `Expression` as an output variable (The intercept is also included as a predictor varible).
+As linear models require a reference level for each predictor factor, The baseline `Kinase` is the wildtype strain and the base condition is YPD.
+The linear model has the form `Expression ~ Kinase + Condition + Intercept`.
+
+The interpretation of the weights in a linear model are as follows.
+
+The intercept indicates the best approximation to the gene expression for wildtype cells in YPD
+The Condition weight indicates the best apprroxiation to the change that a non-YPD condition will have on a gene. (over all kinases)
+The Kinase weight indicates the best approximatiun to the change caused by inhibiting a given kinase (over all conditions)
+
+NOTE: I could just use WT-condition and YPD-kinase here. It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points. especially for the kinase sets.
+
+```{r ref.label='creat_linear_models', eval=FALSE}
+```
+From these models, we extract weights to address attribute 1 and 2, and residuals for attribute 3. Investigation of these values follow in downstream analysis.
+
+Model performace is also assesed to see if a simplistic additive linear (with no interaction term) is capable of modeling the majority of the signal. turns out it does pretty well, see supplement for an indepth analysis.
+
+## Condition weights identify generally accepted gene expression responses
+
+How am i going to show this? is it important?
+
+## Kinase inhibition indicates kinase activity in reference Condition
+
+Basically. I want to start to introduce the logic behind kinase inhibition. If the kinase is off in YPD, we do not expect there to be a signficiant gene exprssion response when we inhibit it. I think one thing we can make a strong claim about is how does a condition modulate a kinase. we have all the info. first we start with the basal level here. then later we use the residual to define context depent stuff.
+
+
 ## Error's in simple linear model reveal conetext dependent regulation.
 ## Gene error modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
 
@@ -177,7 +140,7 @@ We extract measurements that have the largest residuals, and look at the experim
 std_residuals %>%
   arrange(-abs(residual)) %>%
   left_join(t2g %>% select(Gene, name, description)) %>%
-  separate(sample_id,c('Condition','Strain'), sep='_') -> hypotheses
+  separate(sample_id,c('Strain_Code','Condition'), sep='_') -> hypotheses
 
 knitr::kable(hypotheses[1:15,], caption = 'The most significant residuals')
 ```
@@ -195,7 +158,7 @@ hypotheses %>%
   filter(abs(residual) > 3) %>%
   filter(Gene %in% c(scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', what = character()),
                      scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', what = character()))) %>%
-  select(Condition, Strain) %>%
+  select(Condition, Strain_Code) %>%
   table() %>%
   `+`(1) %>%
   log() %>%
@@ -216,9 +179,9 @@ Okay, so if the findings above are true, we should see that the residuals betwee
 ```{r, warning=FALSE}
 p = hypotheses %>%
     filter(abs(residual) > 3) %>%
-    filter(Strain %in% c('HOG1', 'PBS2')) %>%
-  select(name, residual, Strain, Condition) %>%
-  spread(Strain, residual) %>%
+    filter(Strain_Code %in% c('HOG1', 'PBS2')) %>%
+  select(name, residual, Strain_Code, Condition) %>%
+  spread(Strain_Code, residual) %>%
   mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>%
   ggplot(aes(x=HOG1,y=PBS2,fill=Condition,color = Condition, text= paste(name, Condition, sep='_'))) + geom_point()
 plotly::ggplotly(p, width = 880)
@@ -240,17 +203,17 @@ We see this phenomenon in our data:
 ```{r}
 hypotheses %>%
   filter(name == 'FUS1') %>%
-  select(Strain, Condition, residual) %>%
-  group_by(Strain, Condition) %>%
+  select(Strain_Code, Condition, residual) %>%
+  group_by(Strain_Code, Condition) %>%
   summarise_all(mean) %>%
-  ggplot(aes(x = Strain, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('FUS1')
+  ggplot(aes(x = Strain_Code, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('FUS1')
 
 hypotheses %>%
   filter(name == 'AGA1') %>%
-  select(Strain, Condition, residual) %>%
-  group_by(Strain, Condition) %>%
+  select(Strain_Code, Condition, residual) %>%
+  group_by(Strain_Code, Condition) %>%
   summarise_all(mean) %>%
-  ggplot(aes(x = Strain, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('AGA1')
+  ggplot(aes(x = Strain_Code, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('AGA1')
 
 ```
 
@@ -264,15 +227,15 @@ NB: for this data I actually also include my data... need to fix
 
 I happen to know that FUS1 cluster is cluster 36 in this dataset, which I hope will exhibit the same residual pattern (activated in Salt, when PBS2, or HOG1 are inactive)
 
-```{r}
+```{r, eval=F}
 clusters_inspire = read.csv('../../input/clusters/INSPIRE_clusters/all_clusters.csv')
 want = clusters_inspire %>% filter(Cluster==36) %>% select(Gene)
 hypotheses %>%
   filter(Gene %in% want$Gene) %>%
-  select(Strain, Condition, residual) %>%
-  group_by(Strain, Condition) %>%
+  select(Strain_Code, Condition, residual) %>%
+  group_by(Strain_Code, Condition) %>%
   summarise_all(mean) %>%
-  ggplot(aes(x = Strain, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  ggplot(aes(x = Strain_Code, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
 
@@ -283,12 +246,12 @@ Lets see if there are meaningful go terms and motifs for this cluster:
 
 ```{r}
 #knitr::kable(this_cluster)
-webshot::webshot("../../intermediate/INSPIRE_clusters/cluster_36/ame.html")
+# webshot::webshot("../../intermediate/INSPIRE_clusters/cluster_36/ame.html")
 ```
 
 And what about GO terms?
 
-```{r, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, eval=FALSE, echo=TRUE}
 get_go_terms_from_list = function(query_list, background_list) {
     library(goseq)
     library(org.Sc.sgd.db)
@@ -338,7 +301,7 @@ print_out_terms(g)
 RNA-seq Evidence: Lower GSR (PC1) Expression in stress with PBS2 strain
 
 ```{r}
-ggplot(sample_tsne, aes(x = PC1, y = PC2, color = Strain=='PBS2')) + geom_point() + facet_wrap(~Condition)
+ggplot(sample_tsne, aes(x = PC1, y = PC2, color = Strain_Code=='PBS2')) + geom_point() + facet_wrap(~Condition)
 ```
 
 #### Idea:
@@ -387,7 +350,7 @@ MSN2 becomes less nuclear (more cytoplasmic) after PBS2 is inactivated. (This re
 PBS2 has a role that is HOG1 independent. this is motivated by differences in gene expression:
 
 ```{r}
-sample_tsne %>% mutate(strain_of_interest = ifelse(Strain %in% c('HOG1', 'PBS2'), Strain, 'Other')) %>%
+sample_tsne %>% mutate(strain_of_interest = ifelse(Strain_Code %in% c('HOG1', 'PBS2'), Strain_Code, 'Other')) %>%
 ggplot(aes(x = PC1, y = PC2, color = strain_of_interest)) + geom_point() + facet_wrap(~Condition)
 ```
 
