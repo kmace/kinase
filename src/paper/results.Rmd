@@ -39,6 +39,47 @@ TODO: Define tsne clusters, and then show the clusters in a morpheous image
 
 Currently, we just show the data ordered by Stress, or Kinase
 
+
+```{r}
+genes %>% 
+  dplyr::select(name, data) %>% 
+  unnest() %>% 
+  dplyr::select(Norm_Differential_Expression, Sample_Name, name) %>% 
+  spread(key = Sample_Name, value = Norm_Differential_Expression, fill = NA) %>%
+  remove_rownames() %>% 
+  column_to_rownames('name') %>% 
+  as.matrix() -> gene_expression_matrix
+
+# meta = as_tibble(meta)
+as_tibble(meta) %>%
+     dplyr::slice(match(colnames(gene_expression_matrix), Sample_Name)) %>%
+     dplyr::select(Condition, Strain) -> meta_sub
+strain_color = rainbow(29)[factor(meta_sub$Strain)]
+condition_color = rainbow(10)[factor(meta_sub$Condition)]
+ColSideColors = cbind(Condition=condition_color, Strain=strain_color)
+
+num_genes_to_show = 5000
+
+genes %>% 
+  filter(Gene_mean > 6) %>% 
+  top_n(num_genes_to_show, Gene_sd) %>% 
+  pull(name) -> genes_to_show
+
+
+library(heatmap3)
+
+heatmap3(gene_expression_matrix[genes_to_show,],
+ColSideColors=ColSideColors,
+showRowDendro=FALSE,
+scale = 'none',
+balanceColor = TRUE,
+labRow = NA,
+labCol = NA
+)
+
+```
+
+
 ##### Ordered by condition:
 
 ![](img/by_condition.png)
