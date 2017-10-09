@@ -1,4 +1,4 @@
----  
+---
 title: An analysis of stress propagation through the kinome reveals novel pathway
   interactions
 author: "Kieran Mace"
@@ -20,19 +20,25 @@ read_chunk("temp")
 unlink('temp')
 ```
 
-```{r, child = 'abstract.Rmd'}
+```{r paper_setup, echo=FALSE, message=FALSE}
+library(tidyverse)
+load('../../intermediate/images/paper_data.RData')
 ```
 
-```{r, child = 'introduction.Rmd'}
+```{r, child='abstract.Rmd'}
 ```
 
-```{r, child = 'results.Rmd'}
+```{r, child='introduction.Rmd'}
 ```
 
-```{r, child = 'summary.Rmd'}
+```{r, child='methods.Rmd'}
 ```
 
-```{r, child = 'supplement.Rmd'}
+```{r, child='results.Rmd'}
 ```
 
+```{r, child='summary.Rmd'}
+```
 
+```{r, child='supplement.Rmd'}
+```
