@@ -14,7 +14,7 @@
 #### I hope to show that:
 
 1. What's happening: I'm going to build the linear model
-2. I'm going to show that it has good performance over most genes. 
+2. I'm going to show that it has good performance over most genes.
 
 ### Building the models:
 
@@ -23,7 +23,7 @@ For every gene, we build a linear model to predict gene expression. The inputs t
 For a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2), or
 
 $$\Delta E_g \approx C_g + K_g$$
-Where $\Delta E$ is the change in log expression, and $C$ and $K$ are the contributions from the condition and kinase respectively. 
+Where $\Delta E$ is the change in log expression, and $C$ and $K$ are the contributions from the condition and kinase respectively.
 
 
 ```{r ref.label='create_linear_models', eval = FALSE}
@@ -38,14 +38,14 @@ Lets look at the $R^{2}$ for each gene in the full model:
 
 ```{r}
 genes %>% select(Gene, performance) %>% unnest() -> model_quality
-model_quality %>% # Both kinase, and condition are taken into account 
-    ggplot(aes(x=r.squared)) + 
+model_quality %>% # Both kinase, and condition are taken into account
+    ggplot(aes(x=r.squared)) +
     geom_density(fill='blue', alpha=.5) +
     ggtitle('Percentage of variance explained by the full model')
 ```
- 
+
  Okay, so for most genes, the model does well. For what genes does it perform badly?
- 
+
 Lets look at an example of strong and week performance:
 
 ```{r, echo=FALSE}
@@ -67,7 +67,7 @@ p_cond_box = ggplot(dat, aes(x = Condition, y = Expression)) +
              geom_text_repel(aes(label = condition_outlier), size=2, na.rm = TRUE) +
              coord_flip() +
              theme(axis.text.x = element_blank())
-             
+
 
 p_strain_box = ggplot(dat, aes(x = Strain, y = Expression)) +
                geom_boxplot() +
@@ -126,17 +126,17 @@ residual_plot = function(gene, all, t2g) {
 
 ```
 
- 
+
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
 model_quality %>% left_join(t2g) %>%
-    select(Gene, name, r.squared) %>% 
+    select(Gene, name, r.squared) %>%
     arrange(r.squared) %>% head(5) %>% knitr::kable(caption = 'Worst Models')
 ```
 
 
 ```{r, message=FALSE, warning=FALSE}
 model_quality %>% left_join(t2g) %>%
-    select(Gene, name, r.squared) %>% 
+    select(Gene, name, r.squared) %>%
     arrange(-r.squared) %>% head(5) %>% knitr::kable(caption = 'Best Models')
 ```
 
@@ -159,9 +159,9 @@ Lastly, lets take a look at HSP12:
 
 
 
-What makes the model weak? for very low scores (<.3) we generally see that this is dominated by genes with low expression values. 
+What makes the model weak? for very low scores (<.3) we generally see that this is dominated by genes with low expression values.
 
-For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistasis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence. 
+For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistasis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence.
 
 Potential way to prove that this model is actually performing well:
 What is the distribution of R^2 for row shuffled, column shuffled, or completely shuffled inputs?
@@ -188,7 +188,7 @@ This section is missing
 
 
 ## Condition and Strain identities explain non-redundant aspects of the gene expression
-Since a kinase inhibition is a much more targeted perturbation compared to a stress, we should ask how much information is in each contribution. 
+Since a kinase inhibition is a much more targeted perturbation compared to a stress, we should ask how much information is in each contribution.
 
 To break this down, lets see how much $R^2$ we loose by removing a variable from the model:
 
@@ -199,9 +199,9 @@ $$ R^2_{loss} = R^2_{full} - R^2_{reduced} $$
 
 
 ```{r, eval=FALSE}
-gather(as_tibble(lasts), Last_Factor, added_r2) %>% 
-  ggplot(aes(x = added_r2, fill = Last_Factor)) + 
-  geom_density(alpha = .5) + 
+gather(as_tibble(lasts), Last_Factor, added_r2) %>%
+  ggplot(aes(x = added_r2, fill = Last_Factor)) +
+  geom_density(alpha = .5) +
   ggtitle('R^2 loss from removing variable', subtitle = 'Each variables contribution when included in the model last, also sometimes called usefulness')
 ```
 
@@ -212,12 +212,13 @@ gather(as_tibble(lasts), Last_Factor, added_r2) %>%
 I don't know much about SLT2, and PCK1, other than they are in the same pathway. Lets take a look at them. (residual cutoff at 2)
 
 ```{r, warning=FALSE}
-p = hypotheses %>% 
-  filter(abs(residual) > 2) %>% 
-  filter(Strain_Code %in% c('SLT2', 'PKC1')) %>% 
-  select(name, residual, Strain_Code, Condition) %>% 
-  spread(Strain_Code, residual) %>% 
-  mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>% 
-  ggplot(aes(x=SLT2,y=PKC1,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point() 
-plotly::ggplotly(p, width = 880)
+p = hypotheses %>%
+  filter(abs(residual) > 2) %>%
+  filter(Strain_Code %in% c('SLT2', 'PKC1')) %>%
+  select(name, residual, Strain_Code, Condition) %>%
+  spread(Strain_Code, residual) %>%
+  mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>%
+  ggplot(aes(x=SLT2,y=PKC1,fill=Condition, text= paste(name, Condition, sep='_'))) + geom_point()
+# plotly::ggplotly(p, width = 880)
+print(p)
 ```

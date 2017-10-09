@@ -2,7 +2,7 @@
 
 ## Samples cluster into distinct kinases, and condition, and pathway specific Clusters.
 
-### Raw Data Heatmap
+### Raw Data Heat-map
 
 ```{r}
 genes %>%
@@ -42,7 +42,7 @@ labCol = NA
 )
 
 ```
-Generating a gene expression heatmap across all samples, we can see that there is definite structure. The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level. To explore these further, we use unsupervised methods to cluster the samples
+Generating a gene expression heat-map across all samples, we can see that there is definite structure. The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level. To explore these further, we use unsupervised methods to cluster the samples
 
 ### Clustering samples reveals distinct condition, kinase, and pathway specific groups
 
@@ -95,17 +95,17 @@ The resulting change in gene expression is then measured using RNA-seq and analy
 From this data we hope to characterize three sets of attributes for each gene.
 1. The general effect a condition has on the genes
 2. The general effect the inhibition of a kinase has on the gene.
-3. specific instancs of condition + kinase-inhibition pairs that do not conform to the addition of their general effects
+3. specific instances of condition + kinase-inhibition pairs that do not conform to the addition of their general effects
 
-To atchieve this we create a linear model for each gene, using the `Condition` and `Kinase` as predictor variables to predict `Expression` as an output variable (The intercept is also included as a predictor varible).
-As linear models require a reference level for each predictor factor, The baseline `Kinase` is the wildtype strain and the base condition is YPD.
+To achieve this we create a linear model for each gene, using the `Condition` and `Kinase` as predictor variables to predict `Expression` as an output variable (The intercept is also included as a predictor variable).
+As linear models require a reference level for each predictor factor, The baseline `Kinase` is the wild-type strain and the base condition is YPD.
 The linear model has the form `Expression ~ Kinase + Condition + Intercept`.
 
 The interpretation of the weights in a linear model are as follows.
 
-The intercept indicates the best approximation to the gene expression for wildtype cells in YPD
-The Condition weight indicates the best apprroxiation to the change that a non-YPD condition will have on a gene. (over all kinases)
-The Kinase weight indicates the best approximatiun to the change caused by inhibiting a given kinase (over all conditions)
+The intercept indicates the best approximation to the gene expression for wild-type cells in YPD
+The Condition weight indicates the best approximation to the change that a non-YPD condition will have on a gene. (over all kinases)
+The Kinase weight indicates the best approximation to the change caused by inhibiting a given kinase (over all conditions)
 
 NOTE: I could just use WT-condition and YPD-kinase here. It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points. especially for the kinase sets.
 
@@ -113,23 +113,23 @@ NOTE: I could just use WT-condition and YPD-kinase here. It would be easier to e
 ```
 From these models, we extract weights to address attribute 1 and 2, and residuals for attribute 3. Investigation of these values follow in downstream analysis.
 
-Model performace is also assesed to see if a simplistic additive linear (with no interaction term) is capable of modeling the majority of the signal. turns out it does pretty well, see supplement for an indepth analysis.
+Model performance is also assessed to see if a simplistic additive linear (with no interaction term) is capable of modeling the majority of the signal. turns out it does pretty well, see supplement for an in-depth analysis.
 
 ## Condition weights identify generally accepted gene expression responses
 
 How am i going to show this? is it important?
 
-lets look at the genes and weights clusterd in a heatmap.
+lets look at the genes and weights clustered in a heat-map.
 
 It is widely accepted that there are condition specific gene expression responses. I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
 
 
 ## Kinase inhibition indicates kinase activity in reference Condition
 
-Basically. I want to start to introduce the logic behind kinase inhibition. If the kinase is off in YPD, we do not expect there to be a signficiant gene exprssion response when we inhibit it. I think one thing we can make a strong claim about is how does a condition modulate a kinase. we have all the info. first we start with the basal level here. then later we use the residual to define context depent stuff.
+Basically. I want to start to introduce the logic behind kinase inhibition. If the kinase is off in YPD, we do not expect there to be a significant gene expression response when we inhibit it. I think one thing we can make a strong claim about is how does a condition modulate a kinase. we have all the info. first we start with the basal level here. then later we use the residual to define context dependent stuff.
 
 
-## Expression error  in the lienar model modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
+## Expression error  in the linear model modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
 
 The linear model has an underlying assumption that the change gene expression chages can be explained by adding up the the contribution of condition, and kinase inhibiotion independently. Therefore, genes and samples where this prediction fails are strong candidates for an interaction term between Condition and Kianse.
 
@@ -141,9 +141,6 @@ In order to account for noise in measurements, we further cluster genes wit simi
 
 
 
-```{r, message=FALSE, warning=FALSE}
-library(plotly)
-```
 
 ### Calculation of standard residuals
 
@@ -229,7 +226,8 @@ p = hypotheses %>%
   spread(Strain_Code, residual) %>%
   mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>%
   ggplot(aes(x=HOG1,y=PBS2,fill=Condition,color = Condition, text= paste(name, Condition, sep='_'))) + geom_point()
-plotly::ggplotly(p, width = 880)
+print(p)
+#plotly::ggplotly(p, width = 880)
 ```
 
 Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals. They do for Salt, but do not for Menadione, and Glucose Dropout. This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions.
