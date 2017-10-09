@@ -1,16 +1,60 @@
 # Results:
 
-## Clustering of samples shows distinct kinases, and condition, and pathway specific groups
+## Samples cluster into distinct kinases, and condition, and pathway specific Clusters.
 
-### Clustering with TSNE
+### Raw Data Heatmap
 
-We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited. Here, we cluster the samples by performing t-SNE on gene expression vectors with default t-SNE parameters
+```{r}
+genes %>%
+  dplyr::select(name, data) %>%
+  unnest() %>%
+  dplyr::select(Norm_Differential_Expression, Sample_Name, name) %>%
+  spread(key = Sample_Name, value = Norm_Differential_Expression, fill = NA) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> gene_expression_matrix
+
+# meta = as_tibble(meta)
+as_tibble(meta) %>%
+     dplyr::slice(match(colnames(gene_expression_matrix), Sample_Name)) %>%
+     dplyr::select(Condition, Strain) -> meta_sub
+strain_color = rainbow(29)[factor(meta_sub$Strain)]
+condition_color = rainbow(10)[factor(meta_sub$Condition)]
+ColSideColors = cbind(Condition=condition_color, Strain=strain_color)
+
+num_genes_to_show = 5000
+
+genes %>%
+  filter(Gene_mean > 6) %>%
+  top_n(num_genes_to_show, Gene_sd) %>%
+  pull(name) -> genes_to_show
+
+
+library(heatmap3)
+
+heatmap3(gene_expression_matrix[genes_to_show,],
+ColSideColors=ColSideColors,
+showRowDendro=FALSE,
+scale = 'none',
+balanceColor = TRUE,
+labRow = NA,
+labCol = NA
+)
+
+```
+Generating a gene expression heatmap across all samples, we can see that there is definite structure. The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level. To explore these further, we use unsupervised methods to cluster the samples
+
+### Clustering samples reveals distinct condition, kinase, and pathway specific groups
+
+We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited. Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reveals
 
 ```{r ref.label='tsne_cluster', eval=FALSE}
 ```
 
 
-When plotting the gene expression vectors in t-SNE space, we see that the samples cluster into distinct kinase, and condition, and context dependent clusters:
+When plotting each sample in t-SNE space, we see that the samples cluster into distinct kinase, and condition, and context dependent clusters:
+
+Firstly, we look at samples that have no analog-sensitive kinase:
 
 ```{r, message = FALSE, fig.width=12, fig.height=10}
 library(ggrepel)
@@ -28,69 +72,16 @@ ggplot(df,
                   box.padding = unit(0.01, "lines"))
 }
 tsne_plot(sample_tsne %>% filter(grepl('WT', Strain_Code))) + ggtitle('just WT')
+```
+
+Now we look at all the data
+
+```{r, message = FALSE, fig.width=12, fig.height=10}
 tsne_plot(sample_tsne)
 ```
+Notice that some clusters are consistantly a single condtion, whereas others are consistantly a particluar kinase, and in some cases, the samples are the same condtion, and only include kinases that are in the same pathway.
 
-### Full dataset heatmap
-
-Using these groups, we order the samples in terms of their cluster, and show the full heatmap.
-
-TODO: Define tsne clusters, and then show the clusters in a morpheous image
-
-Currently, we just show the data ordered by Stress, or Kinase
-
-
-```{r}
-genes %>% 
-  dplyr::select(name, data) %>% 
-  unnest() %>% 
-  dplyr::select(Norm_Differential_Expression, Sample_Name, name) %>% 
-  spread(key = Sample_Name, value = Norm_Differential_Expression, fill = NA) %>%
-  remove_rownames() %>% 
-  column_to_rownames('name') %>% 
-  as.matrix() -> gene_expression_matrix
-
-# meta = as_tibble(meta)
-as_tibble(meta) %>%
-     dplyr::slice(match(colnames(gene_expression_matrix), Sample_Name)) %>%
-     dplyr::select(Condition, Strain) -> meta_sub
-strain_color = rainbow(29)[factor(meta_sub$Strain)]
-condition_color = rainbow(10)[factor(meta_sub$Condition)]
-ColSideColors = cbind(Condition=condition_color, Strain=strain_color)
-
-num_genes_to_show = 5000
-
-genes %>% 
-  filter(Gene_mean > 6) %>% 
-  top_n(num_genes_to_show, Gene_sd) %>% 
-  pull(name) -> genes_to_show
-
-
-library(heatmap3)
-
-heatmap3(gene_expression_matrix[genes_to_show,],
-ColSideColors=ColSideColors,
-showRowDendro=FALSE,
-scale = 'none',
-balanceColor = TRUE,
-labRow = NA,
-labCol = NA
-)
-
-```
-
-
-##### Ordered by condition:
-
-![](img/by_condition.png)
-
-\newpage
-
-##### Ordered by kinase:
-
-![](img/by_strain.png)
-
-\newpage
+![](img/overlayed_clusters_tsne.png)
 
 
 
