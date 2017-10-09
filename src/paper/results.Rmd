@@ -4,7 +4,7 @@
 
 ### Clustering with TSNE
 
-There are 300 samples, each with an applied condition, kinase inhibition, and a gene expression vector. Here, we cluster the samples by performing t-SNE on gene expression vectors with default t-SNE parameters
+We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited. Here, we cluster the samples by performing t-SNE on gene expression vectors with default t-SNE parameters
 
 ```{r ref.label='tsne_cluster', eval=FALSE}
 ```
@@ -87,13 +87,26 @@ Model performace is also assesed to see if a simplistic additive linear (with no
 
 How am i going to show this? is it important?
 
+lets look at the genes and weights clusterd in a heatmap.
+
+It is widely accepted that there are condition specific gene expression responses. I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
+
+
 ## Kinase inhibition indicates kinase activity in reference Condition
 
 Basically. I want to start to introduce the logic behind kinase inhibition. If the kinase is off in YPD, we do not expect there to be a signficiant gene exprssion response when we inhibit it. I think one thing we can make a strong claim about is how does a condition modulate a kinase. we have all the info. first we start with the basal level here. then later we use the residual to define context depent stuff.
 
 
-## Error's in simple linear model reveal conetext dependent regulation.
-## Gene error modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
+## Expression error  in the lienar model modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
+
+The linear model has an underlying assumption that the change gene expression chages can be explained by adding up the the contribution of condition, and kinase inhibiotion independently. Therefore, genes and samples where this prediction fails are strong candidates for an interaction term between Condition and Kianse.
+
+We interpret that interaction as a context dependent event between the codition and kinase. Therefore identifying known, and new pathways of information propogation from condition to Kinase to gene.
+
+
+In order to account for noise in measurements, we further cluster genes wit similar context depedent regulation into modules. Hoping to show that these modules have Enrichment for GO Terms, and TF motifs in their promoters.
+
+
 
 
 ```{r, message=FALSE, warning=FALSE}
@@ -292,6 +305,8 @@ print_out_terms(g)
 <!-- 	  * Mating pathway   -->
 
 \newpage
+
+## TOR Program cluster? Chat with david
 
 ## Pbs2 is independently required for activation of (a submodule of) the ESR under stress.
 
