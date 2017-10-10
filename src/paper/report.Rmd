@@ -7,9 +7,6 @@ output:
     includes:
       in_header: header.tex
     toc: yes
-  html_document:
-    self_contained: yes
-    toc: yes
 ---
 
 ```{r, echo=FALSE}
