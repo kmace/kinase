@@ -204,6 +204,27 @@ gather(as_tibble(lasts), Last_Factor, added_r2) %>%
   geom_density(alpha = .5) +
   ggtitle('R^2 loss from removing variable', subtitle = 'Each variables contribution when included in the model last, also sometimes called usefulness')
 ```
+## Standardized Residuals are normally distributed
+
+
+Now that we have the standardized residuals, lets take a look at them. What structure do they have? lets take a deep dive.
+
+First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that they are normally distributed. lets check:
+
+```{r}
+resids = std_residuals  %>% pull(residual)
+hist(resids, breaks = 200)
+```
+
+Okay, that looks good, but what are the mean and variance? we expect 0, and 1.
+
+```{r}
+print(paste('Mean:', mean(resids)))
+print(paste('Standard Deviation:', sd(resids)))
+
+```
+
+Close enough!
 
 
 ## Needs Placement

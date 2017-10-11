@@ -12,6 +12,7 @@ output:
 ```{r, echo=FALSE}
 library(knitr)
 opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 invisible(purl("data_handling.Rmd", output="temp", quiet=TRUE))
 read_chunk("temp")
 unlink('temp')
