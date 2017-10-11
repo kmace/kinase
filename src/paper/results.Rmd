@@ -462,11 +462,9 @@ print_out_terms(g)
 <!-- The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.
   -->
 
-<!-- 1.
-If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair   -->
+<!-- 1. If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair   -->
 <!--     * HSP12 on Salt + PKA (Get GD?) -->
-<!-- 2.
-If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response) -->
+<!-- 2. If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response) -->
 <!-- 	  * Mating pathway   -->
 
 \newpage
