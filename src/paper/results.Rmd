@@ -42,11 +42,14 @@ labCol = NA
 )
 
 ```
+
+TODO: try make this heatmap look better with morpheus.
+
 Generating a gene expression heat-map across all samples, we can see that there is definite structure. The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level. To explore these further, we use unsupervised methods to cluster the samples
 
 ### Clustering samples reveals distinct condition, kinase, and pathway specific groups
 
-We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited. Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reveals
+We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited. Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reduces these samples from ~6000 dimensions (genes) into 2. Although this representation can not be used to infer proporites of the global structure of the sample space, it can be used to identify clusters of similar samples (gene expression profiles)
 
 ```{r ref.label='tsne_cluster', eval=FALSE}
 ```
@@ -54,7 +57,7 @@ We collect 300 whole genome gene expression measurements, each with one of 10 co
 
 When plotting each sample in t-SNE space, we see that the samples cluster into distinct kinase, and condition, and context dependent clusters:
 
-Firstly, we look at samples that have no analog-sensitive kinase:
+Firstly, we will look at the bioligical replicates in the collected data, 3-4 wild-type strains subjected to one of the ten possilbe conditions.
 
 ```{r, message = FALSE, fig.width=12, fig.height=10}
 library(ggrepel)
@@ -74,12 +77,13 @@ ggplot(df,
 tsne_plot(sample_tsne %>% filter(grepl('WT', Strain_Code))) + ggtitle('just WT')
 ```
 
-Now we look at all the data
+Now we look at all the data. We see that samples are generally clustering together based on their condition, or strain. This indicates that there are strong, reproducible signals generated at the condition and kinase levels. Interestingly, we also notice that PBS2 and HOG1, do not cluster with other salt samples, but rather cluster together. We call this a pathway specific cluster. indicating that although these strains are not similar in a general sense, they are similar in Salt, which happens to be a known activator of the hyperosmotic stress response pathway, which PBS2 and HOG1 are members of.
+
 
 ```{r, message = FALSE, fig.width=12, fig.height=10}
 tsne_plot(sample_tsne)
 ```
-Notice that some clusters are consistantly a single condtion, whereas others are consistantly a particluar kinase, and in some cases, the samples are the same condtion, and only include kinases that are in the same pathway.
+Notice that some clusters are consistantly a single condtion, whereas others are consistantly a particluar kinase, and in some cases, the samples are the same condtion, and only include kinases that are in the same pathway. The groups are annotated below.
 
 ![](img/overlayed_clusters_tsne.png)
 
@@ -124,9 +128,71 @@ lets look at the genes and weights clustered in a heat-map.
 It is widely accepted that there are condition specific gene expression responses. I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
 
 
+```{r}
+genes %>%
+  select(Gene,weights) %>%
+  unnest() %>%
+  filter(grepl('Condition',term)) -> condition_terms
+
+condition_terms = left_join(condition_terms,t2g)
+
+condition_terms %>%
+  filter(p.value<0.01) %>%
+  ggplot(aes(x=estimate,
+             group=term,
+             color=term)) +
+  geom_density()
+
+condition_terms %>%
+  filter(p.value<0.01) %>%
+  select(name, term, estimate) %>%
+  spread(key = term,
+         value = estimate,
+         fill = 0) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> condition_terms_matrix
+
+  condition_terms_matrix = condition_terms_matrix[apply(condition_terms_matrix,1,max)>0,]
+  heatmap3::heatmap3(condition_terms_matrix)
+
+```
+
+
 ## Kinase inhibition indicates kinase activity in reference Condition
 
 Basically. I want to start to introduce the logic behind kinase inhibition. If the kinase is off in YPD, we do not expect there to be a significant gene expression response when we inhibit it. I think one thing we can make a strong claim about is how does a condition modulate a kinase. we have all the info. first we start with the basal level here. then later we use the residual to define context dependent stuff.
+
+
+```{r}
+genes %>%
+  select(Gene,weights) %>%
+  unnest() %>%
+  filter(grepl('Strain',term)) -> kinase_terms
+
+kinase_terms = left_join(kinase_terms,t2g)
+
+kinase_terms %>%
+  filter(p.value<0.01) %>%
+  ggplot(aes(x=estimate,
+             group=term,
+             color=term)) +
+  geom_density()
+
+kinase_terms %>%
+  filter(p.value<0.01) %>%
+  select(name, term, estimate) %>%
+  spread(key = term,
+         value = estimate,
+         fill = 0) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> kinase_terms_matrix
+
+kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
+  heatmap3::heatmap3(kinase_terms_matrix)
+
+```
 
 
 ## Expression error  in the linear model modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
@@ -152,27 +218,10 @@ We will calculate the standardized residuals for each measurement, where standar
 
 $$ S_g = \frac{E_g - \hat{E_g}}{\overline{E_g}} $$
 
+and is by definition normally distributed with zero mean and unit deviation.
+
 ```{r ref.label='extract_residuals', eval = FALSE}
 ```
-
-Now that we have the standardized residuals, lets take a look at them. What structure do they have? lets take a deep dive.
-
-First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that they are normally distributed. lets check:
-
-```{r}
-resids = std_residuals  %>% pull(residual)
-hist(resids, breaks = 200)
-```
-
-Okay, that looks good, but what are the mean and variance? we expect 0, and 1.
-
-```{r}
-print(paste('Mean:', mean(resids)))
-print(paste('Standard Deviation:', sd(resids)))
-
-```
-
-Close enough!
 
 ### Using residual size to predict epistasis
 
