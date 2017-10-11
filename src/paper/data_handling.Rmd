@@ -197,8 +197,7 @@ WGCNA tutorial suggests that we remove the two samples with very large distance.
 
 ```{r}
 clust = cutreeStatic(sampleTree,
-                     cutHeight =
-                       cutoff_height,
+                     cutHeight = cutoff_height,
                      minSize = 10)
 
 keepSamples = (clust==1)
