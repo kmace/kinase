@@ -49,7 +49,7 @@ Generating a gene expression heat-map across all samples, we can see that there 
 The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level.
 To explore these further, we use unsupervised methods to cluster the samples.
 
-### Clustering samples reveals distinct condition, kinase, and pathway specific groups
+### Dimensionality reduction on samples reveals distinct condition, kinase, and pathway specific clusters
 
 We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited.
 Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reduces these samples from ~6000 dimensions (genes) into two.
@@ -58,12 +58,7 @@ Although this representation can not be used to infer properties of the global s
 ```{r ref.label='tsne_cluster', eval=FALSE}
 ```
 
-
-When plotting each sample in t-SNE space, we see that the samples cluster into distinct kinase, and condition, and context dependent clusters:
-
-Firstly, we will look at the bioligical replicates in the collected data, 3-4 wild-type strains subjected to one of the ten possilbe conditions.
-
-```{r, message = FALSE, fig.width=12, fig.height=10}
+```{r}
 library(ggrepel)
 select = dplyr::select
 tsne_plot = function(df){
@@ -78,22 +73,33 @@ ggplot(df,
                   point.padding = NA,
                   box.padding = unit(0.01, "lines"))
 }
-tsne_plot(sample_tsne %>% filter(grepl('WT', Strain_Code))) + ggtitle('just WT')
 ```
 
+#### Wild-type samples
+
+Firstly, we will look at the biological replicates in the collected data, 3 or 4 wild-type strains subjected to one of the ten possible conditions.
+
+
+```{r, message = FALSE, fig.width=12, fig.height=10}
+sample_tsne %>% filter(grepl('WT', Strain_Code)) %>% tsne_plot()# + ggtitle('just WT')
+```
+We see that the dimensionality reduction maintains information necessary to group WT cells with each other, and separate out conditions.
+
+#### All samples
+
 Now we look at all the data.
+
+```{r, message = FALSE, fig.width=12, fig.height=10}
+sample_tsne %>% tsne_plot()
+```
+
 We see that samples are generally clustering together based on their condition, or strain.
 This indicates that there are strong, reproducible signals generated at the condition and kinase levels.
 Interestingly, we also notice that PBS2 and HOG1, do not cluster with other salt samples, but rather cluster together.
 We call this a pathway specific cluster.
-indicating that although these strains are not similar in a general sense, they are similar in Salt, which happens to be a known activator of the hyperosmotic stress response pathway, which PBS2 and HOG1 are members of.
+This may be interpreted as follows: although inhibition of these kinases are not similar in a general sense, the effect of inhibiting these kinases are similar in Salt. Salt is a known activator of the hyper-osmotic stress response pathway, of which PBS2 and HOG1 are its MAPKK and MAPK respectively.
 
-
-```{r, message = FALSE, fig.width=12, fig.height=10}
-tsne_plot(sample_tsne)
-```
-Notice that some clusters are consistently a single condition, whereas others are consistantly a particluar kinase, and in some cases, the samples are the same condition, and only include kinases that are in the same pathway.
-The groups are annotated below.
+We annotate each cluster below as a condition dominated, kinase dominated, or pathway dominated sample cluster below:
 
 ![](img/overlayed_clusters_tsne.png)
 
@@ -106,14 +112,52 @@ The propagation of this information occurs through a pathways of cascading phosp
 Here we use strains with analog sensitive mutants of certain stress associated kinases to block kinase signaling while under a variety of stress.
 The resulting change in gene expression is then measured using RNA-seq and analyzed.
 
-From this data we hope to characterize three sets of attributes for each gene.
-1. The general effect a condition has on the genes
+From this data we hope to characterize three sets of attributes for each gene:
+1. The general effect a condition has on the gene.
 2. The general effect the inhibition of a kinase has on the gene.
-3. specific instances of condition + kinase-inhibition pairs that do not conform to the addition of their general effects
+3. specific instances of condition + kinase-inhibition pairs that interact such that expression cannot be explained by their marginal effects.
 
-To achieve this we create a linear model for each gene, using the `Condition` and `Kinase` as predictor variables to predict `Expression` as an output variable (The intercept is also included as a predictor variable).
-As linear models require a reference level for each predictor factor, The baseline `Kinase` is the wild-type strain and the base condition is YPD.
-The linear model has the form `Expression ~ Kinase + Condition + Intercept`.
+### Full model
+
+To achieve this we first construct a mathematical model for the regulation of each gene.
+
+$$ \Delta E_{ij} = C_{i} + K_{j} + I_{ij} + \epsilon_{ij} $$
+
+Where $\Delta E$ is the change in expression for condition $i$, and kinase-inhibition $j$.
+$C$ is condition independent contribution to the change in expression in condition $i$.
+$K$ is the kinase-inhibition independent contribution to change in expression in kinase-inhibition $j$.
+$I$ is the context dependent contribition to the change in gene experssion under condition $i$ and kinase-inhibition $j$.
+and \epsilon represents noise due to the measurement.
+
+### Approximation
+
+Since modeling the interaction term $I$ explicitly would take exponentially more samples, and make the problem practically unsolvable (not full rank), we construct an approximation to the full model by only considering the independent terms $C$ and $K$.
+
+which yealds:
+
+$$ \Delta E_{ij} \approx C_{i} + K_{j} $$
+
+Which we model as follows:
+
+We construct a lnear model, that takes in two input variables, `Condition` and `Kinase` and applies a ordinary least squares regression to predict the change in `Expression` from the reference state as an output variable (reference state is `Condition = YPD` and `Kinase = None`).
+Therefore for each gene, the linear model has the form `Expression ~ Kinase + Condition`.
+
+or
+
+$$ \widehat{\Delta E_{ij}} = C_{i} + K_{j} $$
+
+NOTE: I could just use WT-condition and YPD-kinase here.
+It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points.
+especially for the kinase sets.
+
+### Residual
+
+Finally, in order to gain insight into the interaction term $I_{ij}$ that we did not model, we calculate the residual $R_{ij}$:
+
+$$  R_{ij} = \Delta E_{ij} - \widehat{\Delta E_{ij}} = I{ij} + \epsilon_{ij} $$
+
+
+### Interpretation
 
 The interpretation of the weights in a linear model are as follows.
 
@@ -121,10 +165,6 @@ The intercept indicates the best approximation to the gene expression for wild-t
 The Condition weight indicates the best approximation to the change that a non-YPD condition will have on a gene.
 (over all kinases)
 The Kinase weight indicates the best approximation to the change caused by inhibiting a given kinase (over all conditions)
-
-NOTE: I could just use WT-condition and YPD-kinase here.
-It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points.
-especially for the kinase sets.
 
 ```{r ref.label='creat_linear_models', eval=FALSE}
 ```
@@ -138,7 +178,7 @@ turns out it does pretty well, see supplement for an in-depth analysis.
 
 How am i going to show this? is it important?
 
-lets look at the genes and weights clustered in a heat-map.
+lets look at the genes and weights clustered in a heat-map. (this is the vector $K$ for each gene)
 
 It is widely accepted that there are condition specific gene expression responses.
 I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
@@ -185,6 +225,8 @@ we have all the info.
 first we start with the basal level here.
 then later we use the residual to define context dependent stuff.
 
+This is a heatmap of the $K$ vector for each gene
+
 
 ```{r}
 genes %>%
@@ -217,10 +259,19 @@ kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
 ```
 
 
-## Expression error  in the linear model modules suggest context dependent regulation.
+## Residual in the linear model modules suggest context dependent regulation.
+
+So we know that $R_{ij} = I_{ij} + \epsilon_{ij}$
+
+If $\epsilon_{ij}$ is small, then $R_{ij} = I_{ij}$
+
+If $\epsilon_{ij}$ is large, then we can still get around it becuase $\bar{\epsilon_{ij}} \approx 0, when averaged over many genes or:
+
+$\bar{R_{ij}} = \bar{I_{ij}}$
+
 Recovering known crosstalk and uncovering potential new context dependent regulation.
 
-The linear model has an underlying assumption that the change gene expression chages can be explained by adding up the the contribution of condition, and kinase inhibiotion independently.
+The linear model has an underlying assumption that the change gene expression chages can be explained by adding up the the contribution of condition, and kinase inhibition independently.
 Therefore, genes and samples where this prediction fails are strong candidates for an interaction term between Condition and Kianse.
 
 We interpret that interaction as a context dependent event between the codition and kinase.
@@ -249,7 +300,7 @@ and is by definition normally distributed with zero mean and unit deviation.
 ```{r ref.label='extract_residuals', eval = FALSE}
 ```
 
-### Using residual size to predict epistasis
+### Using gene residual size to predict context dependent regulation
 
 We extract measurements that have the largest residuals, and look at the experimental conditions that produced them.
 lets take a look at the top ones:
@@ -311,9 +362,7 @@ Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlat
 They do for Salt, but do not for Menadione, and Glucose Dropout.
 This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions.
 
-
-
-#### Expanding single gene analysis to gene modules
+### Using module residual size to predict context dependent regulation
 
 Here we build up residual patterns from a single gene to a module.
 
