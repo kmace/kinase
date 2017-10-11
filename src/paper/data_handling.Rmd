@@ -171,6 +171,7 @@ std_resid_matrix = std_residuals %>%
 Lets sort the genes into clusters by clustering on significantly large residuals: TODO decide if we should also include the weights as additional columns to cluster on?
 
 Also, since small residuals are not significant, we will reduce any residual smaller than +/-2 to zero
+
 ```{r}
 library(WGCNA)
 resid = t(std_resid_matrix)
