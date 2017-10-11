@@ -45,11 +45,15 @@ labCol = NA
 
 TODO: try make this heatmap look better with morpheus.
 
-Generating a gene expression heat-map across all samples, we can see that there is definite structure. The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level. To explore these further, we use unsupervised methods to cluster the samples
+Generating a gene expression heat-map across all samples, we can see that there is definite structure.
+The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level.
+To explore these further, we use unsupervised methods to cluster the samples.
 
 ### Clustering samples reveals distinct condition, kinase, and pathway specific groups
 
-We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited. Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reduces these samples from ~6000 dimensions (genes) into 2. Although this representation can not be used to infer proporites of the global structure of the sample space, it can be used to identify clusters of similar samples (gene expression profiles)
+We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited.
+Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reduces these samples from ~6000 dimensions (genes) into two.
+Although this representation can not be used to infer properties of the global structure of the sample space, it can be used to identify clusters of similar samples (gene expression profiles)
 
 ```{r ref.label='tsne_cluster', eval=FALSE}
 ```
@@ -77,13 +81,19 @@ ggplot(df,
 tsne_plot(sample_tsne %>% filter(grepl('WT', Strain_Code))) + ggtitle('just WT')
 ```
 
-Now we look at all the data. We see that samples are generally clustering together based on their condition, or strain. This indicates that there are strong, reproducible signals generated at the condition and kinase levels. Interestingly, we also notice that PBS2 and HOG1, do not cluster with other salt samples, but rather cluster together. We call this a pathway specific cluster. indicating that although these strains are not similar in a general sense, they are similar in Salt, which happens to be a known activator of the hyperosmotic stress response pathway, which PBS2 and HOG1 are members of.
+Now we look at all the data.
+We see that samples are generally clustering together based on their condition, or strain.
+This indicates that there are strong, reproducible signals generated at the condition and kinase levels.
+Interestingly, we also notice that PBS2 and HOG1, do not cluster with other salt samples, but rather cluster together.
+We call this a pathway specific cluster.
+indicating that although these strains are not similar in a general sense, they are similar in Salt, which happens to be a known activator of the hyperosmotic stress response pathway, which PBS2 and HOG1 are members of.
 
 
 ```{r, message = FALSE, fig.width=12, fig.height=10}
 tsne_plot(sample_tsne)
 ```
-Notice that some clusters are consistantly a single condtion, whereas others are consistantly a particluar kinase, and in some cases, the samples are the same condtion, and only include kinases that are in the same pathway. The groups are annotated below.
+Notice that some clusters are consistently a single condition, whereas others are consistantly a particluar kinase, and in some cases, the samples are the same condition, and only include kinases that are in the same pathway.
+The groups are annotated below.
 
 ![](img/overlayed_clusters_tsne.png)
 
@@ -108,16 +118,21 @@ The linear model has the form `Expression ~ Kinase + Condition + Intercept`.
 The interpretation of the weights in a linear model are as follows.
 
 The intercept indicates the best approximation to the gene expression for wild-type cells in YPD
-The Condition weight indicates the best approximation to the change that a non-YPD condition will have on a gene. (over all kinases)
+The Condition weight indicates the best approximation to the change that a non-YPD condition will have on a gene.
+(over all kinases)
 The Kinase weight indicates the best approximation to the change caused by inhibiting a given kinase (over all conditions)
 
-NOTE: I could just use WT-condition and YPD-kinase here. It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points. especially for the kinase sets.
+NOTE: I could just use WT-condition and YPD-kinase here.
+It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points.
+especially for the kinase sets.
 
 ```{r ref.label='creat_linear_models', eval=FALSE}
 ```
-From these models, we extract weights to address attribute 1 and 2, and residuals for attribute 3. Investigation of these values follow in downstream analysis.
+From these models, we extract weights to address attribute 1 and 2, and residuals for attribute 3.
+Investigation of these values follow in downstream analysis.
 
-Model performance is also assessed to see if a simplistic additive linear (with no interaction term) is capable of modeling the majority of the signal. turns out it does pretty well, see supplement for an in-depth analysis.
+Model performance is also assessed to see if a simplistic additive linear (with no interaction term) is capable of modeling the majority of the signal.
+turns out it does pretty well, see supplement for an in-depth analysis.
 
 ## Condition weights identify generally accepted gene expression responses
 
@@ -125,7 +140,8 @@ How am i going to show this? is it important?
 
 lets look at the genes and weights clustered in a heat-map.
 
-It is widely accepted that there are condition specific gene expression responses. I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
+It is widely accepted that there are condition specific gene expression responses.
+I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
 
 
 ```{r}
@@ -161,7 +177,13 @@ condition_terms %>%
 
 ## Kinase inhibition indicates kinase activity in reference Condition
 
-Basically. I want to start to introduce the logic behind kinase inhibition. If the kinase is off in YPD, we do not expect there to be a significant gene expression response when we inhibit it. I think one thing we can make a strong claim about is how does a condition modulate a kinase. we have all the info. first we start with the basal level here. then later we use the residual to define context dependent stuff.
+Basically.
+I want to start to introduce the logic behind kinase inhibition.
+If the kinase is off in YPD, we do not expect there to be a significant gene expression response when we inhibit it.
+I think one thing we can make a strong claim about is how does a condition modulate a kinase.
+we have all the info.
+first we start with the basal level here.
+then later we use the residual to define context dependent stuff.
 
 
 ```{r}
@@ -195,14 +217,18 @@ kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
 ```
 
 
-## Expression error  in the linear model modules suggest context dependent regulation. Recovering known crosstalk and uncovering potential new context dependent regulation.
+## Expression error  in the linear model modules suggest context dependent regulation.
+Recovering known crosstalk and uncovering potential new context dependent regulation.
 
-The linear model has an underlying assumption that the change gene expression chages can be explained by adding up the the contribution of condition, and kinase inhibiotion independently. Therefore, genes and samples where this prediction fails are strong candidates for an interaction term between Condition and Kianse.
+The linear model has an underlying assumption that the change gene expression chages can be explained by adding up the the contribution of condition, and kinase inhibiotion independently.
+Therefore, genes and samples where this prediction fails are strong candidates for an interaction term between Condition and Kianse.
 
-We interpret that interaction as a context dependent event between the codition and kinase. Therefore identifying known, and new pathways of information propogation from condition to Kinase to gene.
+We interpret that interaction as a context dependent event between the codition and kinase.
+Therefore identifying known, and new pathways of information propogation from condition to Kinase to gene.
 
 
-In order to account for noise in measurements, we further cluster genes wit similar context depedent regulation into modules. Hoping to show that these modules have Enrichment for GO Terms, and TF motifs in their promoters.
+In order to account for noise in measurements, we further cluster genes wit similar context depedent regulation into modules.
+Hoping to show that these modules have Enrichment for GO Terms, and TF motifs in their promoters.
 
 
 
@@ -225,7 +251,8 @@ and is by definition normally distributed with zero mean and unit deviation.
 
 ### Using residual size to predict epistasis
 
-We extract measurements that have the largest residuals, and look at the experimental conditions that produced them. lets take a look at the top ones:
+We extract measurements that have the largest residuals, and look at the experimental conditions that produced them.
+lets take a look at the top ones:
 
 ```{r, warning=FALSE, message=FALSE}
 std_residuals %>%
@@ -265,7 +292,8 @@ hypotheses %>%
 
 #### Diving into a some examples
 
-Okay, so if the findings above are true, we should see that the residuals between PBS2, and HOG1 to correlate for genes that have significant residuals. lets check that now:
+Okay, so if the findings above are true, we should see that the residuals between PBS2, and HOG1 to correlate for genes that have significant residuals.
+lets check that now:
 
 ```{r, warning=FALSE}
 p = hypotheses %>%
@@ -279,7 +307,9 @@ print(p)
 #plotly::ggplotly(p, width = 880)
 ```
 
-Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals. They do for Salt, but do not for Menadione, and Glucose Dropout. This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions.
+Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals.
+They do for Salt, but do not for Menadione, and Glucose Dropout.
+This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions.
 
 
 
@@ -287,7 +317,9 @@ Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlat
 
 Here we build up residual patterns from a single gene to a module.
 
-As an example, we are going to look into the mating pathway. The mating pathway shares a kinase with the HOG pathway (STE11). It is known that mating pathway genes are not expressed during salt stress, and that their repression is due to the activity of the HOG pathway.
+As an example, we are going to look into the mating pathway.
+The mating pathway shares a kinase with the HOG pathway (STE11).
+It is known that mating pathway genes are not expressed during salt stress, and that their repression is due to the activity of the HOG pathway.
 
 We see this phenomenon in our data:
 
@@ -315,7 +347,8 @@ Although we do not have replicates of these residuals, we can become more confid
 To define a pathway, we use INSPIRE to cluster genes using other datatsets.
 
 These clusters were actually generated from orthogonal data (gasch, and pronk datasets)
-NB: for this data I actually also include my data... need to fix
+NB: for this data I actually also include my data...
+need to fix
 
 I happen to know that FUS1 cluster is cluster 36 in this dataset, which I hope will exhibit the same residual pattern (activated in Salt, when PBS2, or HOG1 are inactive)
 
@@ -331,7 +364,8 @@ hypotheses %>%
 
 ```
 
-And it does. Although we do not have replicates for FUS1, if we average the residuals for the __module__ where FUS1 was included we get a robust residual pattern.
+And it does.
+Although we do not have replicates for FUS1, if we average the residuals for the __module__ where FUS1 was included we get a robust residual pattern.
 
 
 Lets see if there are meaningful go terms and motifs for this cluster:
@@ -376,11 +410,14 @@ print_out_terms(g)
 
 <!-- ### Error modules (groups of error profiles) reveal Known classes of epistatic relationships -->
 <!-- <!-- Class 1 -->
-<!-- The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.   -->
+<!-- The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.
+  -->
 
-<!-- 1. If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair   -->
+<!-- 1.
+If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair   -->
 <!--     * HSP12 on Salt + PKA (Get GD?) -->
-<!-- 2. If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response) -->
+<!-- 2.
+If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response) -->
 <!-- 	  * Mating pathway   -->
 
 \newpage
@@ -426,13 +463,15 @@ Direct PKA inhibition to produce same levels of activity, regardless of PBS2 sta
 ### Claim 3: PBS2 acts at or above RAS
 
 #### Idea:
-Does direct modulation of RAS activity rescue the PBS2 phenotype? If so, the effect of PBS2 must be upstream of, or at the level of RAS. If not, PBS2 must act somewhere downstream of RAS.
+Does direct modulation of RAS activity rescue the PBS2 phenotype? If so, the effect of PBS2 must be upstream of, or at the level of RAS.
+If not, PBS2 must act somewhere downstream of RAS.
 
 #### Experiment:
 Measure HSP12 activity with RAS held in the active (PKA on, MSN2 cytoplasmic, HSP12 off) followed by PBS2 activation
 
 #### Expect to see:
-MSN2 becomes less nuclear (more cytoplasmic) after PBS2 is inactivated. (This requires that the PBS2-as has normal function in the absence of 1-NMPP1)
+MSN2 becomes less nuclear (more cytoplasmic) after PBS2 is inactivated.
+(This requires that the PBS2-as has normal function in the absence of 1-NMPP1)
 
 #### Result:
 
@@ -441,7 +480,8 @@ MSN2 becomes less nuclear (more cytoplasmic) after PBS2 is inactivated. (This re
 ### Claim 4: PBS2 has a secondary function to Hog1
 
 #### Idea:
-PBS2 has a role that is HOG1 independent. this is motivated by differences in gene expression:
+PBS2 has a role that is HOG1 independent.
+this is motivated by differences in gene expression:
 
 ```{r}
 sample_tsne %>% mutate(strain_of_interest = ifelse(Strain_Code %in% c('HOG1', 'PBS2'), Strain_Code, 'Other')) %>%

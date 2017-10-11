@@ -1,3 +1,6 @@
 # Abstract
 
-Yeast cells are continually challenged by ever-changing environments. In order for the cell to mount a transcriptional response, cells must sense their external environment, bimolecularly encode that information, and propagate it toward the nucleus, where gene expression levels can be changed. We use a library of analog sensitive kinase strains to probe how the activity of individual kinases contribute the total transcriptional response in a stress dependent manner. We use a simple linear regression technique to subtract out general effects of environments and kinase inhibitions, leaving context dependent regulation.
+Yeast cells are continually challenged by ever-changing environments.
+In order for the cell to mount a transcriptional response, cells must sense their external environment, bimolecularly encode that information, and propagate it toward the nucleus, where gene expression levels can be changed.
+We use a library of analog sensitive kinase strains to probe how the activity of individual kinases contribute the total transcriptional response in a stress dependent manner.
+We use a simple linear regression technique to subtract out general effects of environments and kinase inhibitions, leaving context dependent regulation.

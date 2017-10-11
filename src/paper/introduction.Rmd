@@ -1,7 +1,11 @@
 # Introduction
 
-Yeast cells are continually challenged by ever-changing environments. Due to the stress these changing environments have on almost all biological processes, yeast cells attempt to mitigate their effects by mounting a range of adaptive responses, including the modification of their gene expression profile. In order for the cell to mount the correct gene expression response, cells must sense their external environment, bimolecularly encode that information, and propagate it toward the nucleus, where gene expression can be changed.
+Yeast cells are continually challenged by ever-changing environments.
+Due to the stress these changing environments have on almost all biological processes, yeast cells attempt to mitigate their effects by mounting a range of adaptive responses, including the modification of their gene expression profile.
+In order for the cell to mount the correct gene expression response, cells must sense their external environment, bimolecularly encode that information, and propagate it toward the nucleus, where gene expression can be changed.
 
-The propagation of this information happens through a cascade of signaling events between numerous signaling molecules. One well defined linear cascade of signaling events, and their molecules make up a signaling pathway. In yeast, the chief family of signaling molecules used in response to stress are kinases.
+The propagation of this information happens through a cascade of signaling events between numerous signaling molecules.
+One well defined linear cascade of signaling events, and their molecules make up a signaling pathway.
+In yeast, the chief family of signaling molecules used in response to stress are kinases.
 
 Kinases get phosphorylated, and generally phosphorylate other kinases until the terminal kinase phosphorylates other proteins such as Transcription Factors, which in tern activate the transcriptional response.

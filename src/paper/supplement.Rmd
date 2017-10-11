@@ -18,7 +18,10 @@
 
 ### Building the models:
 
-For every gene, we build a linear model to predict gene expression. The inputs to this model are the sample metadata (Condition and Kinase inhibition). Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condition, and from the kinase.  For example:
+For every gene, we build a linear model to predict gene expression.
+The inputs to this model are the sample metadata (Condition and Kinase inhibition).
+Although sometimes unrealistic, these models assume that changes in gene expression can be computed by adding up the individual effects provided by the condition, and from the kinase.
+ For example:
 
 For a gene that goes up 4X in from YPD to salt (+2 log2), and goes up 2X when PKA is inhibited (+1 log2), the model would expect the gene to be 8X increased in both Salt and PKA (+3 log2), or
 
@@ -44,7 +47,8 @@ model_quality %>% # Both kinase, and condition are taken into account
     ggtitle('Percentage of variance explained by the full model')
 ```
 
- Okay, so for most genes, the model does well. For what genes does it perform badly?
+ Okay, so for most genes, the model does well.
+For what genes does it perform badly?
 
 Lets look at an example of strong and week performance:
 
@@ -161,7 +165,10 @@ Lastly, lets take a look at HSP12:
 
 What makes the model weak? for very low scores (<.3) we generally see that this is dominated by genes with low expression values.
 
-For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases. But $R^2$ is a metric for the entire model. We will later look at the residuals of individual data points to better detect epistasis. For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence.
+For moderately weak models, We would like to think it is because our simplistic linear model cannot account for epistatic effects between conditions and kinases.
+But $R^2$ is a metric for the entire model.
+We will later look at the residuals of individual data points to better detect epistasis.
+For example FUS1 and HSP12 have very high $R^2$ even thought they have strong epistatic evidence.
 
 Potential way to prove that this model is actually performing well:
 What is the distribution of R^2 for row shuffled, column shuffled, or completely shuffled inputs?
@@ -207,9 +214,11 @@ gather(as_tibble(lasts), Last_Factor, added_r2) %>%
 ## Standardized Residuals are normally distributed
 
 
-Now that we have the standardized residuals, lets take a look at them. What structure do they have? lets take a deep dive.
+Now that we have the standardized residuals, lets take a look at them.
+What structure do they have? lets take a deep dive.
 
-First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that they are normally distributed. lets check:
+First question, what is the spread of these standardized residuals, according to theory, they should look similar to a z-score, meaning that they are normally distributed.
+lets check:
 
 ```{r}
 resids = std_residuals  %>% pull(residual)
@@ -230,7 +239,9 @@ Close enough!
 ## Needs Placement
 
 
-I don't know much about SLT2, and PCK1, other than they are in the same pathway. Lets take a look at them. (residual cutoff at 2)
+I don't know much about SLT2, and PCK1, other than they are in the same pathway.
+Lets take a look at them.
+(residual cutoff at 2)
 
 ```{r, warning=FALSE}
 p = hypotheses %>%

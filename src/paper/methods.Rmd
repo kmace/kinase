@@ -4,18 +4,24 @@
 ![](img/Experiment_Cartoon.png)
 
 ### Experimental Details:
-28 Stress associated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper). These strains, along with 4 reference wild type strains were then grown overnight to log phase. Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied. Gene expression was then measured 20 min later by RNA-seq.
+28 Stress associated kinases were selected and from the analog sensitive kinase library (reference Joanna's paper).
+These strains, along with 4 reference wild type strains were then grown overnight to log phase.
+Once in log phase, kinase activity was inhibited using an inhibitor, and one of 10 conditions was then applied.
+Gene expression was then measured 20 min later by RNA-seq.
 
 
 ### Analysis Details:
 
-Reads were then aligned and normalized, then a linear model was created for each gene with Kinase and Condition as predictor variables. Predictor weights were used to ...., and large residuals profiles were clustered then analyzed to generate hypothetical condition kinase interactions.
+Reads were then aligned and normalized, then a linear model was created for each gene with Kinase and Condition as predictor variables.
+Predictor weights were used to ...., and large residuals profiles were clustered then analyzed to generate hypothetical condition kinase interactions.
 
 ![](img/Kinase_Pipeline.png)
 
 #### Data Loading and Normalization:
 
-Data is aligned with STAR, and then expression levels are normalized using the variance stabilizing transformation from the DESeq2 package. It is then loaded in for analysis. (see the [supplement](#Supplement) specifically [here](##Sequence-Alignment,-Normalization,-and-Transformation:) for how its done)
+Data is aligned with STAR, and then expression levels are normalized using the variance stabilizing transformation from the DESeq2 package.
+It is then loaded in for analysis.
+(see the [supplement](#Supplement) specifically [here](##Sequence-Alignment,-Normalization,-and-Transformation:) for how its done)
 
 
 ```{r ref.label='data_loading', eval=FALSE}
@@ -26,16 +32,24 @@ Data is aligned with STAR, and then expression levels are normalized using the v
 
 
 We then calculate basic statistics on the gene level, this includes:
-1. Condition outliers
-2. Kinase outliers
-3. Representations of expression levels
-4. Basic statistics
+1.
+Condition outliers
+2.
+Kinase outliers
+3.
+Representations of expression levels
+4.
+Basic statistics
 
 ```{r ref.label='gene_statistics', eval=FALSE}
 ```
 
 
-Genes with very low mean expression tend to have very unstructured variability (low $R^2$), probably due to very low signal to noise ratio. These genes are not useful and might even be problematic in downstream analysis. As we can infer very little about these genes, it is appropriate to filter them out. After considering model performance as a function of mean, and variance as a funcition of mean, we will filter out genes with a low mean expression level. (Mean expression < 2^6 == 64 Counts)
+Genes with very low mean expression tend to have very unstructured variability (low $R^2$), probably due to very low signal to noise ratio.
+These genes are not useful and might even be problematic in downstream analysis.
+As we can infer very little about these genes, it is appropriate to filter them out.
+After considering model performance as a function of mean, and variance as a funcition of mean, we will filter out genes with a low mean expression level.
+(Mean expression < 2^6 == 64 Counts)
 
 ```{r ref.label='gene_filter', eval=FALSE}
 ```
