@@ -4,7 +4,7 @@
 
 ### Raw Data Heat-map
 
-```{r}
+```{r fig.height=12, fig.width=10}
 genes %>%
   dplyr::select(name, data) %>%
   unnest() %>%
@@ -18,9 +18,10 @@ genes %>%
 as_tibble(meta) %>%
      dplyr::slice(match(colnames(gene_expression_matrix), Sample_Name)) %>%
      dplyr::select(Condition, Strain) -> meta_sub
-strain_color = rainbow(29)[factor(meta_sub$Strain)]
-condition_color = rainbow(10)[factor(meta_sub$Condition)]
-ColSideColors = cbind(Condition=condition_color, Strain=strain_color)
+
+# strain_color = rainbow(29)[factor(meta_sub$Strain)]
+# condition_color = rainbow(10)[factor(meta_sub$Condition)]
+# ColSideColors = cbind(Condition=condition_color, Strain=strain_color)
 
 num_genes_to_show = 5000
 
@@ -30,16 +31,54 @@ genes %>%
   pull(name) -> genes_to_show
 
 
-library(heatmap3)
+# library(heatmap3)
+# 
+# heatmap3(gene_expression_matrix[genes_to_show,],
+# ColSideColors=ColSideColors,
+# method = 'single',
+# showRowDendro=FALSE,
+# scale = 'none',
+# balanceColor = TRUE,
+# labRow = NA,
+# labCol = NA, 
+# useRaster = TRUE,
+# )
+library(pheatmap)
+library(RColorBrewer)
+library(viridis)
 
-heatmap3(gene_expression_matrix[genes_to_show,],
-ColSideColors=ColSideColors,
-showRowDendro=FALSE,
-scale = 'none',
-balanceColor = TRUE,
-labRow = NA,
-labCol = NA
-)
+mat = gene_expression_matrix[genes_to_show,]
+
+
+quantile_breaks <- function(xs, n = 10) {
+  breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
+  breaks[!duplicated(breaks)]
+}
+
+mat_col = meta_sub
+mat_col=mat_col %>% as.data.frame()
+rownames(mat_col) = colnames(mat)
+
+mat_breaks <- quantile_breaks(mat, n = 11)
+
+coolwarm_hcl <- colorspace::diverge_hcl(11,
+                                        h = c(250, 10), 
+                                        c = 100, 
+                                        l = c(37, 88), 
+                                        power = c(0.7, 1.7))
+
+
+pheatmap(mat,
+         color = coolwarm_hcl,
+         scale = 'none',
+         breaks = mat_breaks,
+         border_color = NA,
+         show_rownames = FALSE,
+         show_colnames = FALSE,
+         annotation_col = mat_col)
+
+
+#http://slowkow.com/notes/heatmap-tutorial/
 
 ```
 
@@ -127,7 +166,7 @@ Where $\Delta E$ is the change in expression for condition $i$, and kinase-inhib
 $C$ is condition independent contribution to the change in expression in condition $i$.
 $K$ is the kinase-inhibition independent contribution to change in expression in kinase-inhibition $j$.
 $I$ is the context dependent contribition to the change in gene experssion under condition $i$ and kinase-inhibition $j$.
-and \epsilon represents noise due to the measurement.
+and $\epsilon$ represents noise due to the measurement.
 
 ### Approximation
 
@@ -210,7 +249,7 @@ condition_terms %>%
   as.matrix() -> condition_terms_matrix
 
   condition_terms_matrix = condition_terms_matrix[apply(condition_terms_matrix,1,max)>0,]
-  heatmap3::heatmap3(condition_terms_matrix)
+  pheatmap(condition_terms_matrix)
 
 ```
 
@@ -254,7 +293,7 @@ kinase_terms %>%
   as.matrix() -> kinase_terms_matrix
 
 kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
-  heatmap3::heatmap3(kinase_terms_matrix)
+  pheatmap(kinase_terms_matrix)
 
 ```
 
@@ -265,7 +304,7 @@ So we know that $R_{ij} = I_{ij} + \epsilon_{ij}$
 
 If $\epsilon_{ij}$ is small, then $R_{ij} = I_{ij}$
 
-If $\epsilon_{ij}$ is large, then we can still get around it becuase $\bar{\epsilon_{ij}} \approx 0, when averaged over many genes or:
+If $\epsilon_{ij}$ is large, then we can still get around it becuase $\bar{\epsilon_{ij}} \approx 0$, when averaged over many genes or:
 
 $\bar{R_{ij}} = \bar{I_{ij}}$
 
