@@ -255,3 +255,45 @@ p = hypotheses %>%
 # plotly::ggplotly(p, width = 880)
 print(p)
 ```
+Next, lets see what `Condition + Strain` pairs contain significant residuals over all genes in the ESR:
+
+```{r}
+hypotheses %>%
+  filter(abs(residual) > 3) %>%
+  filter(Gene %in% c(scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', what = character()),
+                     scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', what = character()))) %>%
+  select(Condition, Strain_Code) %>%
+  table() %>%
+  `+`(1) %>%
+  log() %>%
+  heatmap(col=viridis::viridis(20))
+
+```
+
+
+#### Some quick observations here:
+* Kinases in the same pathway cluster together:
+    + SLT2 and PKC are very closely clustered!
+    + PBS2 and HOG1 are very closely clustered!
+* SCH9 Seems to have an effect, but only in YPD?
+
+#### Diving into a some examples
+
+Okay, so if the findings above are true, we should see that the residuals between PBS2, and HOG1 to correlate for genes that have significant residuals.
+lets check that now:
+
+```{r, warning=FALSE}
+p = hypotheses %>%
+    filter(abs(residual) > 3) %>%
+    filter(Strain_Code %in% c('HOG1', 'PBS2')) %>%
+  select(name, residual, Strain_Code, Condition) %>%
+  spread(Strain_Code, residual) %>%
+  mutate_at(3:4, function(x) if_else(is.na(x),0,x)) %>%
+  ggplot(aes(x=HOG1,y=PBS2,fill=Condition,color = Condition, text= paste(name, Condition, sep='_'))) + geom_point()
+print(p)
+#plotly::ggplotly(p, width = 880)
+```
+
+Interestingly, inactivation of PBS2, and HOG1 do not always produce the correlated residuals.
+They do for Salt, but do not for Menadione, and Glucose Dropout.
+This might be evidence that PBS2 and HOG1 have different functions in non-salt conditions.

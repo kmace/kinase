@@ -172,7 +172,7 @@ Lets sort the genes into clusters by clustering on significantly large residuals
 
 Also, since small residuals are not significant, we will reduce any residual smaller than +/-2 to zero
 
-```{r}
+```{r }
 library(WGCNA)
 resid = t(std_resid_matrix)
 resid[abs(resid)<2] = 0
@@ -262,7 +262,6 @@ net = blockwiseModules(resid,
 
 ```{r}
 moduleLabels = net$colors
-moduleColors = labels2colors(moduleLabels)
 
 modules = tibble(module = as.character(moduleLabels),
                  name = colnames(resid)) %>%

@@ -3,7 +3,11 @@ title: An analysis of stress propagation through the kinome reveals novel pathwa
   interactions
 author: "Kieran Mace"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
   pdf_document:
+    fig_caption: no
     includes:
       in_header: header.tex
     toc: yes
@@ -12,7 +16,7 @@ output:
 ```{r, echo=FALSE}
 library(knitr)
 opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
-opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+#opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 invisible(purl("data_handling.Rmd", output="temp", quiet=TRUE))
 read_chunk("temp")
 unlink('temp')
@@ -20,6 +24,7 @@ unlink('temp')
 
 ```{r paper_setup, echo=FALSE, message=FALSE}
 library(tidyverse)
+library(stringr)
 load('../../intermediate/images/paper_data.RData')
 ```
 
