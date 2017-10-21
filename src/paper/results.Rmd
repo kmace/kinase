@@ -10,6 +10,12 @@ opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
 ### Raw Data Heat-map
 
 ```{r quartile_heatmap}
+
+quantile_breaks <- function(xs, n = 10) {
+  breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
+  breaks[!duplicated(breaks)]
+}
+
 quartile_heatmap = function(mat, col_data){
 
     mat_breaks <- quantile_breaks(mat, n = 11)
