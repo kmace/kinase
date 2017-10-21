@@ -356,7 +356,7 @@ top_residuals %>%
  group_by(Condition, Strain_Code) %>%
  mutate(norm_res = residual/sd(residual)) %>%
  ungroup() %>%
- rename(Strain = Strain_Code) %>%
+ dplyr::rename(Strain = Strain_Code) %>%
  left_join(strain_weights, by = c('name' = 'name', 'Strain' = 'term')) %>%
  left_join(condition_weights, by = c('name' = 'name', 'Condition' = 'term'), suffix=c('_Strain', '_Condition')) %>%
  select(name, residual, norm_res, Condition, Strain, ends_with('Condition'), ends_with('Strain')) %>%
