@@ -9,6 +9,32 @@ opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
 
 ### Raw Data Heat-map
 
+```{r quartile_heatmap}
+quartile_heatmap = function(mat, col_data){
+
+    mat_breaks <- quantile_breaks(mat, n = 11)
+
+    coolwarm_hcl <- colorspace::diverge_hcl(11,
+                                            h = c(250, 10),
+                                            c = 100,
+                                            l = c(37, 88),
+                                            power = c(0.7, 1.7))
+
+    library(pheatmap)
+    # from http://slowkow.com/notes/heatmap-tutorial/
+
+    pheatmap(mat,
+             color = coolwarm_hcl,
+             scale = 'none',
+             breaks = mat_breaks,
+             border_color = NA,
+             show_rownames = FALSE,
+             show_colnames = FALSE,
+             annotation_col = col_data)
+}
+
+```
+
 ```{r fig.height=12, fig.width=10, warning=FALSE}
 genes %>%
   dplyr::select(name, data) %>%
@@ -31,33 +57,10 @@ genes %>%
 
 mat = gene_expression_matrix[genes_to_show,]
 
-quantile_breaks <- function(xs, n = 10) {
-  breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
-  breaks[!duplicated(breaks)]
-}
-
 meta_sub = meta_sub %>% as.data.frame()
 rownames(meta_sub) = colnames(mat)
 
-mat_breaks <- quantile_breaks(mat, n = 11)
-
-coolwarm_hcl <- colorspace::diverge_hcl(11,
-                                        h = c(250, 10),
-                                        c = 100,
-                                        l = c(37, 88),
-                                        power = c(0.7, 1.7))
-
-library(pheatmap)
-# from http://slowkow.com/notes/heatmap-tutorial/
-
-pheatmap(mat,
-         color = coolwarm_hcl,
-         scale = 'none',
-         breaks = mat_breaks,
-         border_color = NA,
-         show_rownames = FALSE,
-         show_colnames = FALSE,
-         annotation_col = meta_sub)
+quartile_heatmap(mat, meta_sub)
 
 ```
 
@@ -421,8 +424,12 @@ In order to define modules, I must first convince the reader that is structure i
 Gasch has shown that this can be used for expression, I believe Krogan has shown that it can be done for S-scores, Stewart-Ornstein does it for noise profiles. I now do it for residuals from the linear model.
 
 ```{r}
-library(pheatmap)
-pheatmap(std_resid_matrix, color=coolwarm_hcl, scale='none', breaks = res_breaks, show_rownames = F, annotation_col = tibble(cname = colnames(std_resid_matrix)) %>% separate(cname,c('Kinase','Condition'),'_') %>% transmute_all(funs(as.factor)), show_colnames = F)
+
+annotation_col = tibble(cname = colnames(std_resid_matrix)) %>%
+                   separate(cname,c('Kinase','Condition'),'_') %>%
+                   transmute_all(funs(as.factor))
+
+quartile_heatmap(std_resid_matrix, annotation_col)
 ```
 
 From this plot, we can see that genes can be grouped into stereotypical residual patterns. we also see that for the majority of condition kinase combinations, there are little to no residuals. meaning that, as one might expect, that a given condition and kinase do not interact by chance.
