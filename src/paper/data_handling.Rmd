@@ -172,81 +172,95 @@ Lets sort the genes into clusters by clustering on significantly large residuals
 
 Also, since small residuals are not significant, we will reduce any residual smaller than +/-2 to zero
 
-```{r }
-library(WGCNA)
-resid = t(std_resid_matrix)
-resid[abs(resid)<2] = 0
 
-sampleTree = hclust(dist(resid), method = "average");
-sizeGrWindow(12,9)
-par(cex = 0.6);
-par(mar = c(0,4,2,0))
-plot(sampleTree,
-     main = "Sample clustering to detect outliers",
-     sub="",
-     xlab="",
-     cex.lab = 1.5,
-     cex.axis = 1.5,
-     cex.main = 2)
+```{r}
+remove_weird_samples = function(resid, cutoff_height = 160, plot=FALSE){
+    sampleTree = hclust(dist(resid), method = "average");
+    if(plot){
+        sizeGrWindow(12,9)
+        par(cex = 0.6);
+        par(mar = c(0,4,2,0))
+        plot(sampleTree,
+             main = "Sample clustering of all data to detect outliers",
+             sub="",
+             xlab="",
+             cex.lab = 1.5,
+             cex.axis = 1.5,
+             cex.main = 2)
+        abline(h = cutoff_height, col = "red");
+    }
 
-cutoff_height = 160
-abline(h = cutoff_height, col = "red");
+    clust = cutreeStatic(sampleTree,
+                         cutHeight = cutoff_height,
+                         minSize = 10)
+
+    keepSamples = (clust==1)
+    resid = resid[keepSamples, ]
+
+    if(plot){
+        sampleTree = hclust(dist(resid), method = "average");
+        sizeGrWindow(12,9)
+        par(cex = 0.6);
+        par(mar = c(0,4,2,0))
+        plot(sampleTree,
+             main = "Sample clustering with outliers removed",
+             sub="",
+             xlab="",
+             cex.lab = 1.5,
+             cex.axis = 1.5,
+             cex.main = 2)
+    }
+
+    return(resid)
+
+}
+
 ```
 
 WGCNA tutorial suggests that we remove the two samples with very large distance... not sure how great of an idea that is.
 
-```{r}
-clust = cutreeStatic(sampleTree,
-                     cutHeight = cutoff_height,
-                     minSize = 10)
+```{r prep_residuals}
+library(WGCNA)
+resid = t(std_resid_matrix)
+# We squash all residuals that are 2 $\sigma$ down to zero
+resid[abs(resid)<2] = 0
+resid = remove_weird_samples(resid, plot=TRUE)
 
-keepSamples = (clust==1)
-resid = resid[keepSamples, ]
-nGenes = ncol(resid)
-nSamples = nrow(resid)
-
-
-sampleTree = hclust(dist(resid), method = "average");
-sizeGrWindow(12,9)
-par(cex = 0.6);
-par(mar = c(0,4,2,0))
-plot(sampleTree,
-     main = "Sample clustering with outliers removed",
-     sub="",
-     xlab="",
-     cex.lab = 1.5,
-     cex.axis = 1.5,
-     cex.main = 2)
 ```
 
 Now its time to do the clustering. since we care about seperating negativly corrolated modules, we will use a signed network.
 
 ```{r}
+pick_power = function(resid, network_type, powers = c(1:40), plot=FALSE){
+    library(WGCNA)
+    sft = pickSoftThreshold(resid,
+                            powerVector = powers,
+                            verbose = 5,
+                            networkType = network_type)
+    if(plot){
+        sft_table = sft$fitIndices
+
+        plot(sft_table$median.k.,
+             -sign(sft_table$slope) * sft_table$SFT.R.sq,
+             xlab="Soft Threshold (power)",
+             ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+             main = paste("Scale independence"));
+        text(sft_table$median.k.,
+             -sign(sft_table$slope) * sft_table$SFT.R.sq,
+             labels=powers,
+             col="red");
+    }
+    return(sft$powerEstimate)
+}
+```
+
+
+```{r cluster_genes}
 collectGarbage()
 enableWGCNAThreads()
-
 network_type = 'signed'
-powers = c(1:40)
 
-sft = pickSoftThreshold(resid,
-                        powerVector = powers,
-                        verbose = 5,
-                        # corFnc = bicor,
-                        # corOptions = list(maxPOutliers = 0.05),
-                        networkType = network_type)
-
-sft_table = sft$fitIndices
-
-plot(sft_table$median.k.,
-     -sign(sft_table$slope) * sft_table$SFT.R.sq,
-     xlab="Soft Threshold (power)",
-     ylab="Scale Free Topology Model Fit,signed R^2",type="n",
-     main = paste("Scale independence"));
-text(sft_table$median.k.,
-     -sign(sft_table$slope) * sft_table$SFT.R.sq,
-     labels=powers,
-     col="red");
-
+edge_power = pick_power(resid, network_type)
 
 net = blockwiseModules(resid,
                        power = sft$powerEstimate, # is 6 for my data
@@ -258,21 +272,17 @@ net = blockwiseModules(resid,
                        pamRespectsDendro = FALSE,
                        verbose = 3)
 
-```
 
-```{r}
-moduleLabels = net$colors
-
-modules = tibble(module = as.character(moduleLabels),
+modules = tibble(module = as.character(net$colors),
                  name = colnames(resid)) %>%
-                    group_by(module) %>%
-                    nest(.key = genes)
-
-
+                   group_by(module) %>%
+                   nest(.key = genes)
 ```
 
-Lets get eigengene for each module
-```{r}
+
+Lets get all the addtional information for each module
+
+```{r eigengene}
 MEs = as.tibble(net$MEs);
 MEs$sample = rownames(resid)
 MEs = MEs %>%
@@ -287,21 +297,20 @@ modules = modules %>%
 rm(MEs)
 ```
 Lets get go enrichment for each module
-```{r}
+```{r gsea}
 GOenr = GOenrichmentAnalysis(moduleLabels, yeastORFs = colnames(resid), organism = 'yeast')
 tab = GOenr$bestPTerms[[4]]$enrichment %>%
             group_by(module) %>%
             nest(.key = 'go_data')
-
 
 modules = modules %>%
             left_join(tab)
 rm(tab)
 ```
 
-Now lets export the modules for meme analyisis
+Now lets export the modules for meme analysis
 
-```{r}
+```{r meme_prep}
 cluster_dir = '../../intermediate/clusters/WGCNA'
 output_dir = paste0(cluster_dir, '/gene_lists')
 dir.create(output_dir, recursive = TRUE)
@@ -328,7 +337,7 @@ lapply(by_module, function(x) write_genes(x, output_dir))
 
   Run MEME
 
-```{bash}
+```{bash meme}
 bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermediate/clusters/WGCNA
 
 ```
@@ -338,7 +347,7 @@ bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermed
 
 
   # After meme is run:
-```{r}
+```{r meme_import}
 
 tfs = do.call(rbind,
 lapply(dir(paste0(cluster_dir, '/tfs/')),
@@ -349,13 +358,18 @@ function(x) {
                       TF = read.table(path, stringsAsFactors = F))
            )
   }
-})) %>% as_tibble %>% separate(file, c('c', 'module', 't'), sep = '_') %>% dplyr::rename(TF = V1) %>% dplyr::select(module, TF) %>% group_by(module) %>% nest(.key = TFs)
+})) %>%
+ as_tibble %>%
+ separate(file, c('c', 'module', 't'), sep = '_') %>%
+ dplyr::rename(TF = V1) %>%
+ dplyr::select(module, TF) %>%
+ group_by(module) %>%
+ nest(.key = TFs)
 
 modules = modules %>%
   left_join(tfs)
 
 rm(tfs)
-
 ```
 
 
