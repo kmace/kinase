@@ -9,14 +9,14 @@ opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
 
 ### Raw Data Heat-map
 
-```{r quartile_heatmap}
+```{r quantile_heatmap}
 
 quantile_breaks <- function(xs, n = 10) {
   breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
   breaks[!duplicated(breaks)]
 }
 
-quartile_heatmap = function(mat, col_data){
+quantile_heatmap = function(mat, col_data){
 
     mat_breaks <- quantile_breaks(mat, n = 11)
 
@@ -66,7 +66,7 @@ mat = gene_expression_matrix[genes_to_show,]
 meta_sub = meta_sub %>% as.data.frame()
 rownames(meta_sub) = colnames(mat)
 
-quartile_heatmap(mat, meta_sub)
+quantile_heatmap(mat, meta_sub)
 
 ```
 
@@ -443,7 +443,7 @@ annotation_col = data.frame(row.names = colnames(std_resid_matrix),
                    separate(cname,c('Kinase','Condition'),'_') #%>%
                    #transmute_all(funs(as.factor))
 
-quartile_heatmap(std_resid_matrix, annotation_col)
+quantile_heatmap(std_resid_matrix, annotation_col)
 ```
 
 From this plot, we can see that genes can be grouped into stereotypical residual patterns. we also see that for the majority of condition kinase combinations, there are little to no residuals. meaning that, as one might expect, that a given condition and kinase do not interact by chance.
@@ -578,6 +578,26 @@ PBS2 to have a different effect to HOG1, which should look more like WT.
 ## Bringing it all together to generate thousands of potential causal linear pathways
 
 ### Development rules for pathway reconstruction.
+
+From the above results we have the following:
+1. The basal state of the Kinase
+2. The Kinase's General effect on a gene module
+3. The Condtion's general effect on a gene module
+4. Evidence for an interaction between Condition and Kianse
+5. Enriched motifs for a gene module.
+
+Bringing these all together, we propose a rule based methodology for building up linear pathways.
+The rules are as follows:
+
+If a module has a significant TF, assume that all regulation goes through that TF.
+If a kinase has a general effect on the module, it regulates that module.
+If a condition affects a module, but does so independently of all kinases, it affects the module directly
+but if a condition affects a module, but its effect is modulated by a kinase, then the condtion affects the module throught the kinase.
+In this case, where condition goes through a kinase, there are two cases, posotive residuals, and negative residuals.
+We also know if the kinase has a basal activity, that when inhibited has an effect of the module, we can therefore also infer what the sign of the edges are in this case:
+
+If a kinase is basally on, and its inhibition increases the expression of the module, and a condition increases the expression of the module, and the residual is negative, double count.
+If a ...
 
 <!-- ### Error modules (groups of error profiles) reveal Known classes of epistatic relationships -->
 <!-- <!-- Class 1 -->
