@@ -239,7 +239,10 @@ condition_terms %>%
   as.matrix() -> condition_terms_matrix
 
   condition_terms_matrix = condition_terms_matrix[apply(condition_terms_matrix,1,max)>0,]
-  pheatmap(condition_terms_matrix)
+  quartile_heatmap(condition_terms_matrix, 
+                   data.frame(row.names = colnames(condition_terms_matrix),
+                              Condtion = colnames(condition_terms_matrix))
+                   )
 
 ```
 
@@ -285,7 +288,11 @@ kinase_terms %>%
   as.matrix() -> kinase_terms_matrix
 
 kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
-  pheatmap(kinase_terms_matrix)
+
+quartile_heatmap(kinase_terms_matrix, 
+                   data.frame(row.names = colnames(kinase_terms_matrix),
+                              Condtion = colnames(kinase_terms_matrix))
+                   )
 
 ```
 
@@ -431,9 +438,10 @@ Gasch has shown that this can be used for expression, I believe Krogan has shown
 
 ```{r}
 
-annotation_col = tibble(cname = colnames(std_resid_matrix)) %>%
-                   separate(cname,c('Kinase','Condition'),'_') %>%
-                   transmute_all(funs(as.factor))
+annotation_col = data.frame(row.names = colnames(std_resid_matrix),
+                            cname = colnames(std_resid_matrix)) %>%
+                   separate(cname,c('Kinase','Condition'),'_') #%>%
+                   #transmute_all(funs(as.factor))
 
 quartile_heatmap(std_resid_matrix, annotation_col)
 ```
@@ -483,6 +491,22 @@ RNA-seq Evidence: Lower GSR (PC1) Expression in stress with PBS2 strain
 
 ```{r}
 ggplot(sample_tsne, aes(x = PC1, y = PC2, color = Strain_Code=='PBS2')) + geom_point() + facet_wrap(~Condition)
+```
+
+Looking at the estimates of $K_{j}$ for the kinases HOG1, PBS2, and PKA for the ESR genes.
+
+```{r}
+top_residuals_with_norm_and_data %>% 
+  left_join(t2g) %>%  
+  mutate(gene_group = if_else(
+    Gene %in% scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', what = character()), 'rESR', 
+    if_else(
+      Gene %in% scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', what = character()), 'iESR', 
+      'Other'))) %>% 
+  filter(Strain %in% c('HOG1', 'PBS2', 'TPK123')) %>% 
+  ggplot(aes(x = estimate_Strain, fill = Strain)) + 
+    geom_density(alpha=.35) + 
+    facet_wrap(~gene_group)
 ```
 
 #### Idea:
