@@ -582,8 +582,8 @@ PBS2 to have a different effect to HOG1, which should look more like WT.
 From the above results we have the following:
 1. The basal state of the Kinase
 2. The Kinase's General effect on a gene module
-3. The Condtion's general effect on a gene module
-4. Evidence for an interaction between Condition and Kianse
+3. The Condition's general effect on a gene module
+4. Evidence for an interaction between Condition and Kinase
 5. Enriched motifs for a gene module.
 
 Bringing these all together, we propose a rule based methodology for building up linear pathways.
