@@ -245,7 +245,7 @@ Lets take a look at them.
 (residual cutoff at 2)
 
 ```{r, warning=FALSE}
-p = hypotheses %>%
+p = top_residuals %>%
   filter(abs(residual) > 2) %>%
   filter(Strain_Code %in% c('SLT2', 'PKC1')) %>%
   select(name, residual, Strain_Code, Condition) %>%
@@ -258,7 +258,7 @@ print(p)
 Next, lets see what `Condition + Strain` pairs contain significant residuals over all genes in the ESR:
 
 ```{r}
-hypotheses %>%
+top_residuals %>%
   filter(abs(residual) > 3) %>%
   filter(Gene %in% c(scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', what = character()),
                      scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', what = character()))) %>%
@@ -283,7 +283,7 @@ Okay, so if the findings above are true, we should see that the residuals betwee
 lets check that now:
 
 ```{r, warning=FALSE}
-p = hypotheses %>%
+p = top_residuals %>%
     filter(abs(residual) > 3) %>%
     filter(Strain_Code %in% c('HOG1', 'PBS2')) %>%
   select(name, residual, Strain_Code, Condition) %>%
