@@ -12,7 +12,7 @@ opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
 ```{r quantile_heatmap}
 
 quantile_breaks <- function(xs, n = 10) {
-  breaks <- quantile(xs, probs = seq(0, 1, length.out = n))
+  breaks <- quantile(xs, probs = seq(0, 1, length.out = n), na.rm=T)
   breaks[!duplicated(breaks)]
 }
 
@@ -35,7 +35,7 @@ quantile_heatmap = function(mat, col_data){
              breaks = mat_breaks,
              border_color = NA,
              show_rownames = FALSE,
-             show_colnames = FALSE,
+             show_colnames = TRUE,
              annotation_col = col_data)
 }
 
@@ -238,8 +238,8 @@ condition_terms %>%
   column_to_rownames('name') %>%
   as.matrix() -> condition_terms_matrix
 
-  condition_terms_matrix = condition_terms_matrix[apply(condition_terms_matrix,1,max)>0,]
-  quartile_heatmap(condition_terms_matrix, 
+  condition_terms_matrix = condition_terms_matrix[apply(condition_terms_matrix,1,function(x) max(x,na.rm=T))>0,]
+  quantile_heatmap(condition_terms_matrix, 
                    data.frame(row.names = colnames(condition_terms_matrix),
                               Condtion = colnames(condition_terms_matrix))
                    )
@@ -278,7 +278,7 @@ kinase_terms %>%
   geom_density()
 
 kinase_terms %>%
-  filter(p.value<0.01) %>%
+  filter(p.value<0.05) %>%
   select(name, term, estimate) %>%
   spread(key = term,
          value = estimate,
@@ -289,7 +289,7 @@ kinase_terms %>%
 
 kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
 
-quartile_heatmap(kinase_terms_matrix, 
+quantile_heatmap(kinase_terms_matrix  + rnorm(kinase_terms_matrix,0,.005), 
                    data.frame(row.names = colnames(kinase_terms_matrix),
                               Condtion = colnames(kinase_terms_matrix))
                    )
