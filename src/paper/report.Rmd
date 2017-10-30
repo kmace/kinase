@@ -4,6 +4,7 @@ title: An analysis of stress propagation through the kinome reveals novel pathwa
 author: "Kieran Mace"
 output:
   html_document:
+    code_folding: hide
     df_print: paged
     toc: yes
   pdf_document:
