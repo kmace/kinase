@@ -30,10 +30,10 @@ load_seq_meta_data = function() {
 						  )
 					)
 	meta = meta %>%
-		mutate(tophat_path = file.path('../../input/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
-					 star_path = file.path('../../input/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')),
+		mutate(tophat_path = file.path('../../intermediate/counts/tophat', paste(SampleName, '_gene_counts.txt',sep='')),
+					 star_path = file.path('../../intermediate/counts/star', paste(SampleName, '_sequence.txt.gz_ReadsPerGene.out.tab',sep='')),
 					 star_column = if_else(Adaptor=="TruSeq-RNA",3,2),
-					 kallisto_path = file.path('../../input/kallisto/kallisto_output', paste(SampleName,'_sequence.txt.gz',sep='')) ) %>%
+					 kallisto_path = file.path('../../intermediate/kallisto/kallisto_output', paste(SampleName,'_sequence.txt.gz',sep='')) ) %>%
 		rename(sample = SampleName)
 		return(meta)
 }
