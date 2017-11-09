@@ -1,6 +1,6 @@
 load('../../input/images/normalized_data.RData')
 load('../../input/images/dictionary.RData')
-
+# Idea, use raw data to build dictionary instead of pcs
 library(DESeq2)
 target = assay(vsd)
 meta = colData(vsd)
