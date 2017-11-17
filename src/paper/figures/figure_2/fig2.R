@@ -64,18 +64,13 @@ colnames(K) = gsub(pattern='Strain', replacement='', colnames(K))
 library(RColorBrewer)
 library(grDevices)
 
-condition_color = RColorBrewer::brewer.pal(10,"Set3")
-names(condition_color) = sort(unique(sample_meta$Condition))
-
-kinase_color = colorRampPalette(brewer.pal(9, "Set1"))(29)
-names(kinase_color) = sort(unique(sample_meta$Kinase))
 
 master_col = list(Condition = condition_color,
                   Kinase = kinase_color)
 
 sample_ha =  HeatmapAnnotation(sample_meta, col = master_col)
-condition_ha = HeatmapAnnotation(data.frame(Condition = colnames(C)), , col = master_col)
-kinase_ha = HeatmapAnnotation(data.frame(Kinase = colnames(K)), , col = master_col)
+condition_ha = HeatmapAnnotation(data.frame(Condition = colnames(C)), col = master_col)
+kinase_ha = HeatmapAnnotation(data.frame(Kinase = colnames(K)), col = master_col)
 
 
 library(ComplexHeatmap)
@@ -91,12 +86,17 @@ quantile_breaks <- function(xs, n = 10) {
   breaks[!duplicated(breaks)]
 }
 
+# Consistnat coloring on E
+col = colorRamp2(
+  quantile_breaks(E, 11)[-c(1, 11)],
+  coolwarm_hcl
+)
+
+#col = colorRamp2(c(-3, 0, 3), c("green", "white", "red"))
+
 make_hm = function(mat, ...){
     hm = Heatmap(mat,
-                 col = colorRamp2(
-                            quantile_breaks(mat, 11)[-c(1, 11)],
-                            coolwarm_hcl
-                            ),
+        col = col,
         cluster_rows=F,
         cluster_columns=F,
         show_row_names=F,
@@ -107,6 +107,7 @@ make_hm = function(mat, ...){
     return(hm)
 
 }
+
 
 
 e_hm = make_hm(E,
@@ -150,37 +151,37 @@ dev.off()
 # e_hm + c_hm + k_hm + r_hm
 # dev.off()
 
-
-theme_Publication <- function(base_size=14, base_family='') {
-      library(grid)
-      library(ggthemes)
-      (theme_foundation(base_size=base_size, base_family=base_family)
-       + theme(plot.title = element_text(face = "bold",
-                                         size = rel(1.2), hjust = 0.5),
-               text = element_text(),
-               panel.background = element_rect(colour = NA),
-               plot.background = element_rect(colour = NA),
-               panel.border = element_rect(colour = NA),
-               axis.title = element_text(face = "bold",size = rel(1)),
-               axis.title.y = element_text(angle=90,vjust =2),
-               axis.title.x = element_text(vjust = -0.2),
-               axis.text = element_text(),
-               axis.line = element_line(colour="black"),
-               axis.ticks = element_line(),
-               panel.grid.major = element_line(colour="#f0f0f0"),
-               panel.grid.minor = element_blank(),
-               legend.key = element_rect(colour = NA),
-               legend.position = "bottom",
-               legend.direction = "horizontal",
-               legend.key.size= unit(0.2, "cm"),
-               legend.spacing = unit(0, "cm"),
-               legend.title = element_text(face="italic"),
-               plot.margin=unit(c(10,5,5,5),"mm"),
-               strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
-               strip.text = element_text(face="bold")
-          ))
-
-}
+#
+# theme_Publication <- function(base_size=14, base_family='') {
+#       library(grid)
+#       library(ggthemes)
+#       (theme_foundation(base_size=base_size, base_family=base_family)
+#        + theme(plot.title = element_text(face = "bold",
+#                                          size = rel(1.2), hjust = 0.5),
+#                text = element_text(),
+#                panel.background = element_rect(colour = NA),
+#                plot.background = element_rect(colour = NA),
+#                panel.border = element_rect(colour = NA),
+#                axis.title = element_text(face = "bold",size = rel(1)),
+#                axis.title.y = element_text(angle=90,vjust =2),
+#                axis.title.x = element_text(vjust = -0.2),
+#                axis.text = element_text(),
+#                axis.line = element_line(colour="black"),
+#                axis.ticks = element_line(),
+#                panel.grid.major = element_line(colour="#f0f0f0"),
+#                panel.grid.minor = element_blank(),
+#                legend.key = element_rect(colour = NA),
+#                legend.position = "bottom",
+#                legend.direction = "horizontal",
+#                legend.key.size= unit(0.2, "cm"),
+#                legend.spacing = unit(0, "cm"),
+#                legend.title = element_text(face="italic"),
+#                plot.margin=unit(c(10,5,5,5),"mm"),
+#                strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+#                strip.text = element_text(face="bold")
+#           ))
+#
+#}
 
 
 p = genes %>%
@@ -194,17 +195,31 @@ p = genes %>%
     ylab(expression('Density')) +
     scale_y_continuous(expand = c(0, 0))
 
-ggsave(p, 'r2.pdf', height = 7, width = 8)
+ggsave(p, filename = 'r2.pdf', height = 7, width = 8)
 
-n = 'FUS1'
+n = c('AGA1','AGA2','FUS1')
+n = iESR
+n = modules %>% select(module, genes) %>% unnest() %>% filter(module == 29) %>% pull(name)
+
+goTerms = readr::read_delim('~/geo_nlp_to_expression/GOTerm_GeneOrganism.tsv', delim = '\t', col_names = FALSE)
+colnames(goTerms) = c('sgd_gene_id', 'Gene', 'name', 'term_parent', 'term_parent_id', 'term', 'term_id', 'curation', 'verified', 'ontology', 'num', 'paper')
 
 
+n = goTerms %>% filter(grepl('shock', term, ignore.case = TRUE)) %>% pull(name) %>% unique()
+
+n = std_resid_matrix[(std_resid_matrix[,'SCH9_Menadione']) > 2,] %>% rownames()
+
+yeastnet = read_delim('~/Downloads/YeastNet.v3.txt', delim = '\t', col_names = c('Gene_1', 'Gene_2', 'weight'))
+yeastnet %>% na.omit() %>% graph.data.frame(directed = FALSE) -> g
+adj = as_adjacency_matrix(g, attr='weight')
 
 inlay = genes %>%
-    filter(name==n) %>%
+    filter(name %in% n) %>%
     mutate(r2 = map_dbl(performance, "r.squared")) %>%
     select(data, data_augment, r2) %>%
     unnest() %>%
+    group_by(Condition, Strain) %>%
+    summarise_all(mean) %>% ungroup() %>%
     ggplot(aes(x=Expression,y=.fitted, color = Condition, label = Strain)) +
         geom_point(size=2) +
         condition_color_scale +
@@ -212,8 +227,8 @@ inlay = genes %>%
         theme_Publication() +
         xlab('Actual Expression') +
         ylab('Predicted Expression') +
-        geom_text(aes(mean(Expression), max(.fitted), label=paste("Gene: ", n, " | R2: ", round(r2, 3))), color = 'black') +
+        #geom_text(aes(mean(Expression), max(.fitted), label=paste("Gene: ", n, " | R2: ", round(r2, 3))), color = 'black') +
         coord_fixed(ratio=1) +
         geom_abline(slope=1, intercept=0, alpha=.2)
 
-ggsave(inlay, 'inlay.pdf', height = 8, width = 8)
+ggsave(inlay, filename = 'inlay.pdf', height = 8, width = 8)

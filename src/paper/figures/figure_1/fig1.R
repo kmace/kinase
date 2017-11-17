@@ -1,6 +1,7 @@
 library(tidyverse)
 library(ComplexHeatmap)
-library(circlize)load('../../../../intermediate/images/paper_data.RData')
+library(circlize)
+load('../../../../intermediate/images/paper_data.RData')
 source('../make_obj.R')
 source('../colors.R')
 
@@ -43,7 +44,9 @@ e_hm = make_hm(exp_matrix,
     name = '',
     cluster_columns = F,
     top_annotation = sample_ha,
-    heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")))
+    heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
+    use_raster = TRUE,
+    raster_quality = 4)
 
 
 
