@@ -13,4 +13,5 @@ m1 <- m1[,-idx]
 dds = DESeq(dds, test = 'LRT', full = m1, reduced = m2, betaPrior = FALSE)
 res= results(dds)
 save.image(file="ltr_test.RData")
-res %>% select(padj, name) %>% arrange(padj) %>% filter(padj<.05)
+res %>% as.data.frame() %>% rownames_to_column('target_id') %>% left_join(t2g) %>% filter(padj<0.05) %>% select(name, padj) -> res
+res %>% filter(padj<0.05) %>% arrange(padj) %>% readr::write_csv(path='significant_lrt_genes.csv')
