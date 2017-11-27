@@ -172,140 +172,62 @@ Lets sort the genes into clusters by clustering on significantly large residuals
 
 Also, since small residuals are not significant, we will reduce any residual smaller than +/-2 to zero
 
+```{r get_modules_external}
 
-```{r}
-remove_weird_samples = function(resid, cutoff_height = 160, plot=FALSE){
-    sampleTree = hclust(dist(resid), method = "average");
-    if(plot){
-        sizeGrWindow(12,9)
-        par(cex = 0.6);
-        par(mar = c(0,4,2,0))
-        plot(sampleTree,
-             main = "Sample clustering of all data to detect outliers",
-             sub="",
-             xlab="",
-             cex.lab = 1.5,
-             cex.axis = 1.5,
-             cex.main = 2)
-        abline(h = cutoff_height, col = "red");
-    }
-
-    clust = cutreeStatic(sampleTree,
-                         cutHeight = cutoff_height,
-                         minSize = 10)
-
-    keepSamples = (clust==1)
-    resid = resid[keepSamples, ]
-
-    if(plot){
-        sampleTree = hclust(dist(resid), method = "average");
-        sizeGrWindow(12,9)
-        par(cex = 0.6);
-        par(mar = c(0,4,2,0))
-        plot(sampleTree,
-             main = "Sample clustering with outliers removed",
-             sub="",
-             xlab="",
-             cex.lab = 1.5,
-             cex.axis = 1.5,
-             cex.main = 2)
-    }
-
-    return(resid)
-
-}
-
-```
-
-WGCNA tutorial suggests that we remove the two samples with very large distance... not sure how great of an idea that is.
-
-```{r prep_residuals}
+library(readr)
+library(igraph)
+library(gtools)
 library(WGCNA)
-resid = t(std_resid_matrix)
-# We squash all residuals that are 2 $\sigma$ down to zero
-resid[abs(resid)<2] = 0
-resid = remove_weird_samples(resid, plot=TRUE)
+library(dplyr)
+
+yeastnet = read_delim('../../input/external_datasets/YeastNet.v3.txt', delim = '\t', col_names = c('Gene_1', 'Gene_2', 'weight'))
+yeastnet %>% na.omit() %>% graph.data.frame(directed = FALSE) -> g
+adj = as_adjacency_matrix(g, attr='weight', type='both')
+adj = as.matrix(adj)
+adj_inv_logit = inv.logit(adj)
+adj_inv_logit = (adj_inv_logit*2 - 1)
+diag(adj_inv_logit) = 1
+p_est = pickSoftThreshold.fromSimilarity(similarity = adj_inv_logit)$powerEstimate
+TOM = TOMsimilarity(adjMat = adj_inv_logit^p_est)
+dissTOM = 1-TOM
+# Call the hierarchical clustering function
+geneTree = hclust(as.dist(dissTOM), method = "average");
+# Plot the resulting clustering tree (dendrogram)
+
+
+minModuleSize = 10;
+# Module identification using dynamic tree cut:
+dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM,
+deepSplit = 2, pamRespectsDendro = FALSE,
+minClusterSize = minModuleSize);
+
+modules = data.frame(module = dynamicMods, 
+                     Gene = rownames(adj_inv_logit)) %>%
+  left_join(t2g)
+
+# modules = tibble(module = as.character(net$colors),
+#                  name = colnames(resid)) %>%
+#                    group_by(module) %>%
+#                    nest(.key = genes)
 
 ```
 
-Now its time to do the clustering. since we care about seperating negativly corrolated modules, we will use a signed network.
 
-```{r}
-pick_power = function(resid, network_type, powers = c(1:40), plot=FALSE){
-    library(WGCNA)
-    sft = pickSoftThreshold(resid,
-                            powerVector = powers,
-                            verbose = 5,
-                            networkType = network_type)
-    if(plot){
-        sft_table = sft$fitIndices
-
-        plot(sft_table$median.k.,
-             -sign(sft_table$slope) * sft_table$SFT.R.sq,
-             xlab="Soft Threshold (power)",
-             ylab="Scale Free Topology Model Fit,signed R^2",type="n",
-             main = paste("Scale independence"));
-        text(sft_table$median.k.,
-             -sign(sft_table$slope) * sft_table$SFT.R.sq,
-             labels=powers,
-             col="red");
-    }
-    return(sft$powerEstimate)
-}
-```
-
-
-```{r cluster_genes}
-collectGarbage()
-enableWGCNAThreads()
-network_type = 'signed'
-
-edge_power = pick_power(resid, network_type)
-
-net = blockwiseModules(resid,
-                       power = sft$powerEstimate, # is 6 for my data
-                       networType = network_type,
-                       minModuleSize = 4,
-                       deepSplit = 2, # 4 is very strong, 2 gets the job done. not sure about 3
-                       maxBlockSize = 30000,
-                       numericLabels = TRUE,
-                       pamRespectsDendro = FALSE,
-                       verbose = 3)
-
-
-modules = tibble(module = as.character(net$colors),
-                 name = colnames(resid)) %>%
-                   group_by(module) %>%
-                   nest(.key = genes)
-```
 
 
 Lets get all the addtional information for each module
 
-```{r eigengene}
-MEs = as.tibble(net$MEs);
-MEs$sample = rownames(resid)
-MEs = MEs %>%
-  gather(key = module_label, value = sample_loading, -sample) %>%
-  group_by(module_label) %>%
-  nest(.key = eigengene) %>%
-  mutate(module = gsub('ME','',module_label))
 
-modules = modules %>%
-            left_join(MEs)
-
-rm(MEs)
-```
 Lets get go enrichment for each module
 ```{r gsea}
-GOenr = GOenrichmentAnalysis(moduleLabels, yeastORFs = colnames(resid), organism = 'yeast')
-tab = GOenr$bestPTerms[[4]]$enrichment %>%
+library(org.Sc.sgd.db)
+
+GOenr = GOenrichmentAnalysis(dynamicMods, yeastORFs = colnames(resid), organism = 'yeast')
+module_terms = GOenr$bestPTerms[[4]]$enrichment %>%
             group_by(module) %>%
             nest(.key = 'go_data')
 
-modules = modules %>%
-            left_join(tab)
-rm(tab)
+
 ```
 
 Now lets export the modules for meme analysis
@@ -327,7 +249,6 @@ write_genes = function(df, output_dir){
 }
 
 modules %>%
-  dplyr::select(module, genes) %>% unnest() %>%
   split(.$module) -> by_module
 
 lapply(by_module, function(x) write_genes(x, output_dir))
@@ -349,7 +270,7 @@ bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermed
   # After meme is run:
 ```{r meme_import}
 
-tfs = do.call(rbind,
+module_tfs = do.call(rbind,
 lapply(dir(paste0(cluster_dir, '/tfs/')),
 function(x) {
   path = paste0(cluster_dir, '/tfs/', x)
@@ -362,14 +283,7 @@ function(x) {
  as_tibble %>%
  separate(file, c('c', 'module', 't'), sep = '_') %>%
  dplyr::rename(TF = V1) %>%
- dplyr::select(module, TF) %>%
- group_by(module) %>%
- nest(.key = TFs)
-
-modules = modules %>%
-  left_join(tfs)
-
-rm(tfs)
+ dplyr::select(module, TF)
 ```
 
 
@@ -380,6 +294,8 @@ save(list = c('std_resid_matrix',
               'genes',
               'meta',
               'modules',
+              'module_tfs',
+              'module_terms',
               'sample_tsne',
               't2g'),
      file = '../../intermediate/images/paper_data.RData')
