@@ -72,6 +72,13 @@ condition_color_scale = scale_color_manual(name = 'Condition', values = conditio
 kinase_color_scale = scale_color_manual(name = 'Kinase', values = kinase_colors)
 strain_color_scale = scale_color_manual(name = 'Strain', values = kinase_colors)
 
+condition_fill_scale = scale_fill_manual(name = 'Condition', values = condition_colors)
+kinase_fill_scale = scale_fill_manual(name = 'Kinase', values = kinase_colors)
+strain_fill_scale = scale_fill_manual(name = 'Strain', values = kinase_colors)
+
+master_col = list(Condition = condition_colors,
+                  Kinase = kinase_colors)
+
 coolwarm_hcl <- colorspace::diverge_hcl(11,
                                         h = c(250, 10),
                                         c = 100,
@@ -110,4 +117,3 @@ theme_Publication <- function(base_size=14, base_family='') {
           ))
 
 }
-

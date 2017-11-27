@@ -10,8 +10,7 @@ source('../colors.R')
 
 
 
-master_col = list(Condition = condition_colors,
-                  Kinase = kinase_colors)
+
 
 
 quantile_breaks <- function(xs, n = 10) {
@@ -34,7 +33,7 @@ make_hm = function(mat, ...){
 sample_ha =  HeatmapAnnotation(sample_meta,
                                col = master_col,
                                show_annotation_name = TRUE,
-                               annotation_legend_param = list(Kinase = list(ncol = 2,
+                               annotation_legend_param = list(Kinase = list(ncol = 1,
                                                                             title_position = "topleft",
                                                                             by_row=FALSE))
                                                                         )
@@ -50,11 +49,11 @@ e_hm = make_hm(exp_matrix,
 
 
 
-pdf('heatmap.pdf')
-draw(e_hm, heatmap_legend_side = "bottom")
+pdf('heatmap.pdf', width = 6, height = 8)
+draw(e_hm, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
 dev.off()
 
-png('heatmap.png', res = 300)
+png('heatmap.png', res = 300, width = 6, height = 8)
 draw(e_hm, heatmap_legend_side = "bottom")
 dev.off()
 
@@ -62,7 +61,7 @@ dev.off()
 library(ggrepel)
 library(ggthemes)
 
-pdf('tsne.pdf')
+pdf('tsne.pdf', width=5.5, height=5.5)
 ggplot(sample_tsne,
        aes(x=TSNE1,
            y=TSNE2,
@@ -74,6 +73,7 @@ ggplot(sample_tsne,
                   point.padding = NA,
                   box.padding = unit(0.01, "lines")) +
   theme_Publication() +
+  theme(legend.position="none") +
   condition_color_scale
 dev.off()
 
