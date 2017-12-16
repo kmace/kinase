@@ -20,3 +20,5 @@
 *.svgz
 
 *.jpg
+
+src/paper/report_cache/
