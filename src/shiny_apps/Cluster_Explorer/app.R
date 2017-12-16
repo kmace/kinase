@@ -20,8 +20,10 @@ library(ggrepel)
 #source('individual_gene.R')
 #setwd('../shiny_apps/Individual_Gene_Explorer/')
 load('shiny.RData')
+
+source('colors.R')
 source('plotting.R')
-addResourcePath('WGCNA_modules', './WGCNA_modules')
+addResourcePath('WGCNA', './WGCNA')
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
@@ -58,11 +60,26 @@ ui <- fluidPage(
   fluidRow(
     plotOutput("moduleResidual")
   ),
-  # Go Enrichment
-  titlePanel("GO Enrichment"),
+  # Scatter
+  titlePanel("Performance"),
   fluidRow(
-    dataTableOutput("GOEnrichmentTable")
+    plotOutput("modelScatter")
   ),
+  # Strain Weights
+  titlePanel("Kinase Weights"),
+  fluidRow(
+    plotOutput("strainWeights")
+  ),
+  # Condition weights
+  titlePanel("Condition Weights"),
+  fluidRow(
+    plotOutput("conditionWeights")
+  ),
+  # Go Enrichment
+  #titlePanel("GO Enrichment"),
+  #fluidRow(
+  #  dataTableOutput("GOEnrichmentTable")
+  #),
   # Show module Genes
   titlePanel("Modual Membership"),
   fluidRow(
@@ -89,12 +106,18 @@ server <- function(input, output, clientData, session) {
 
   output$moduleSimilarity = renderPlot(get_moduleSimilarity(input$module, MEsCor))
 
-  output$moduleExpression = renderPlot(get_moduleExpression(input$module, module_raw_residuals))
+  output$moduleExpression = renderPlot(get_moduleExpression(input$module, module_expression))
 
   output$moduleResidual = renderPlot(get_moduleResidual(input$module, module_std_residuals))
 
-  output$GOEnrichmentTable = renderDataTable(get_GOEnrichmentTable(input$module, tab),
-                                             options = list(pageLength = 10))
+  output$modelScatter = renderPlot(get_scatter(genes, modules, input$module))
+
+  output$strainWeights = renderPlot(get_strain_weights(genes, modules, input$module))
+
+  output$conditionWeights = renderPlot(get_condition_weights(genes, modules, input$module))
+
+  #output$GOEnrichmentTable = renderDataTable(get_GOEnrichmentTable(input$module, tab),
+  #                                           options = list(pageLength = 10))
 
   output$membershipTable = renderDataTable(get_membershipTable(input$module, modules),
                                             options = list(pageLength = 10))

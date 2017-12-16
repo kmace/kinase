@@ -62,13 +62,12 @@ get_moduleWeightDistribution = function(m, weights){
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 }
 
-get_moduleExpression = function(m, module_raw_residuals){
-  module_raw_residuals %>%
-    filter(residual_type == 'Base', module == m) %>%
-    separate(sample_id, c('Condition', 'Kinase'), '_') %>%
+get_moduleExpression = function(m, module_expression){
+  module_expression %>%
+    filter(module == m) %>%
     ggplot(aes(x = Kinase,
                y = Condition,
-               fill = avg_residual)) +
+               fill = avg_d_exp)) +
     geom_tile() +
     scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red') +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -78,11 +77,11 @@ get_moduleExpression = function(m, module_raw_residuals){
 
 get_moduleResidual = function(m, module_std_residuals){
   module_std_residuals %>%
-    filter(residual_type == 'Full', module == m) %>%
-    separate(sample_id, c('Condition', 'Kinase'), '_') %>%
+    filter(module == m) %>%
+    separate(sample_id, c('Kinase', 'Condition'), '_') %>%
     ggplot(aes(x = Kinase,
                y = Condition,
-               fill = avg_residual)) +
+               fill = residual)) +
     geom_tile() +
     scale_fill_gradient2(low = 'cyan', mid = 'black', high = 'yellow') +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -112,6 +111,44 @@ get_GOEnrichmentTable = function(m, tab){
 }
 
 get_memePage = function(m){
-  path = paste0('WGCNA_modules/meme_output/cluster_', m, '_genes/ame.html')
+  path = paste0('WGCNA/meme/cluster_', m, '/ame.html')
   return(tags$iframe(src=path, height=600, width="100%"))
+}
+
+get_scatter = function(genes, modules, mod_target){
+  genes %>% left_join(modules) %>%
+  #dplyr::filter(grepl('ERG', name)) %>%
+  dplyr::filter(module==mod_target) %>%
+
+  #mutate(r2 = map_dbl(performance, "r.squared")) %>%
+  select(data, data_augment) %>%
+  unnest() %>%
+  group_by(Condition, Strain) %>%
+  summarise(.fitted = mean(.fitted), Expression = mean(Expression), .std.resid = mean(.std.resid)) %>%
+  ungroup() %>%
+  #filter(Condition!='YPD' & Condition != 'Menadione') %>%
+  ggplot(aes(x=Expression,y=.fitted, color = Condition, label = Strain)) +
+  geom_point(size=2) +
+  condition_color_scale +
+  geom_text_repel(data = . %>% filter(abs(.std.resid) > 1), color='black') +
+  theme_Publication() +
+  xlab('Average Actual Expression') +
+  ylab('Average Predicted Expression') +
+  #geom_text(aes(mean(Expression), max(.fitted), label=paste("Gene: ", n, " | R2: ", round(r2, 3))), color = 'black') +
+  coord_fixed(ratio=1) +
+  geom_abline(slope=1, intercept=0, alpha=.2)
+}
+
+get_strain_weights = function(genes, modules, mod_target) {
+  genes %>% left_join(modules) %>%
+    #dplyr::filter(grepl('ERG', name)) %>%
+    dplyr::filter(module==mod_target) %>%
+    select(weights) %>% unnest() %>% filter(grepl('Strain',term)) %>% mutate(Strain = gsub(pattern='Strain',replacement='', term)) %>% ggplot(aes(x=Strain, y = estimate, color=Strain)) + geom_boxplot() + theme_Publication() + strain_color_scale + theme(axis.text.x = element_text(angle = 90, hjust = 1, color = kinase_colors[-1])) + theme(legend.position="none")
+}
+
+get_condition_weights = function(genes, modules, mod_target) {
+  genes %>% left_join(modules) %>%
+    #dplyr::filter(grepl('ERG', name)) %>%
+    dplyr::filter(module==mod_target) %>%
+    select(weights) %>% unnest() %>% filter(grepl('Condition',term)) %>% mutate(Condition = gsub(pattern='Condition',replacement='', term)) %>% ggplot(aes(x=Condition, y = estimate, color=Condition)) + geom_boxplot() + theme_Publication() + condition_color_scale + theme(axis.text.x = element_text(angle = 90, hjust = 1, color = condition_colors[-1])) + theme(legend.position="none")
 }
