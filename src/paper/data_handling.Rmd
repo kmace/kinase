@@ -92,6 +92,16 @@ genes %<>%
                          weights = map(.,tidy),
                          data_augment = map(.,augment)))
 
+# models = genes %>%
+#   left_join(modules) %>% select(data, module, name) %>% unnest() %>%
+#   group_by(module) %>% nest() %>% sample_n(5) %>%
+#   mutate(model = map(data, ~lm(Differential_Expression ~ Strain * Condition, data = .))) %>%
+#   mutate_at(.vars = vars(model),
+#             .funs = funs(performance = map(.,glance),
+#                          weights = map(.,tidy),
+#                          data_augment = map(.,augment)))
+
+
 ```
 
 lets look at model performance, and figure out where our model breaks:
@@ -165,6 +175,20 @@ std_resid_matrix = std_residuals %>%
                      column_to_rownames(var = 'name') %>%
                      as.matrix()
 
+raw_residuals = genes %>%
+  select(data, data_augment, name) %>%
+  unnest() %>%
+  select(name, Condition, Strain_Code, .resid) %>%
+  unite(sample_id, c(Strain_Code, Condition)) %>%
+  rename(residual = .resid)
+
+raw_resid_matrix = raw_residuals %>%
+                     spread(key = sample_id,
+                            value=residual,
+                            drop = TRUE) %>%
+                     remove_rownames() %>%
+                     column_to_rownames(var = 'name') %>%
+                     as.matrix()
 
 ```
 
@@ -216,16 +240,46 @@ modules = data.frame(module = dynamicMods,
 
 
 Lets get all the addtional information for each module
+```{r eigengenes}
+MEs = moduleEigengenes(t(vlog[modules$Gene[modules$Gene %in% rownames(vlog)],]), 
+                 modules$module[modules$Gene %in% rownames(vlog)], 
+                 impute = TRUE, 
+                 nPC = 1, 
+                 align = "along average", 
+                 excludeGrey = FALSE, 
+                 grey = if (is.numeric(colors)) 0 else "grey",
+                 subHubs = TRUE,
+                 softPower = 6,
+                 scale = TRUE,
+                 verbose = 0, indent = 0)$eigengenes
 
+MEsCor = cor(MEs)
+
+
+```
+
+```{r module_avg_residual}
+module_raw_residuals = raw_residuals %>% 
+  left_join(modules) %>% 
+  group_by(module, sample_id) %>% 
+  summarize(residual = mean(residual)) %>% 
+  ungroup()
+
+module_std_residuals = std_residuals %>% 
+  left_join(modules) %>% 
+  group_by(module, sample_id) %>% 
+  summarize(residual = mean(residual)) %>% 
+  ungroup()
+```
 
 Lets get go enrichment for each module
 ```{r gsea}
-library(org.Sc.sgd.db)
-
-GOenr = GOenrichmentAnalysis(dynamicMods, yeastORFs = colnames(resid), organism = 'yeast')
-module_terms = GOenr$bestPTerms[[4]]$enrichment %>%
-            group_by(module) %>%
-            nest(.key = 'go_data')
+# library("anRichment")
+# 
+# library(org.Sc.sgd)
+# 
+# GOenr = GOenrichmentAnalysis(dynamicMods, yeastORFs = colnames(resid), organism = 'yeast')
+# module_terms = GOenr$bestPTerms[[4]]$enrichment
 
 
 ```
@@ -291,11 +345,16 @@ function(x) {
 ```{r data_saving}
 save(list = c('std_resid_matrix',
               'std_residuals',
+              'raw_resid_matrix',
+              'raw_residuals',
+              "module_raw_residuals",
+              "module_std_residuals",
+              "MEsCor",
+              "MEs",
               'genes',
               'meta',
               'modules',
               'module_tfs',
-              'module_terms',
               'sample_tsne',
               't2g'),
      file = '../../intermediate/images/paper_data.RData')
