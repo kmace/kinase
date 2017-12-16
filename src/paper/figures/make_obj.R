@@ -9,7 +9,7 @@ genes %>%
     column_to_rownames('name') %>%
     as.matrix() -> exp_matrix
 
-sample_meta = meta[colnames(exp_matrix), ]
+sample_meta = meta[match(colnames(exp_matrix), rownames(meta)),]
 sample_meta$Kinase = sample_meta$Strain
 sample_meta = as.data.frame(sample_meta) %>%
     select(Condition, Kinase, Sample_Name) %>%
@@ -20,3 +20,4 @@ sample_meta = as.data.frame(sample_meta) %>%
 sample_order = sample_meta %>% rownames()
 
 exp_matrix = exp_matrix[,sample_order]
+
