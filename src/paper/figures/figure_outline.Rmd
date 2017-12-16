@@ -1,0 +1,635 @@
+Load up data and colors
+
+```{r}
+library(tidyverse)
+library(ComplexHeatmap)
+library(circlize)
+load('../../../intermediate/images/paper_data.RData')
+load('../../../intermediate/images/externally_defined_modules.RData')
+source('make_obj.R')
+source('colors.R')
+library(ggrepel)
+library(ggthemes)
+```
+
+# General Overview of data
+# General Overview of computational methods
+# Conditions and kinase relationships
+# kinase, kinase relationships PBS2 PKA [general], HOG1 PBS2 [condition specific]
+# classification of general and specific kinases
+# kinase relationship with modules (rainbow network edges with colors for conditions)
+# Fully connected relationships:
+## residual 1 - Mating pathway
+## residual 2 - proteasome with tor
+# growth stuff - relationship between growth and expression
+
+# Results:
+
+```{r}
+opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
+```
+
+
+## Samples cluster into distinct kinases, and condition, and pathway specific Clusters.
+
+### Raw Data Heat-map
+
+```{r quantile_heatmap}
+
+quantile_breaks <- function(xs, n = 10) {
+  breaks <- quantile(xs, probs = seq(0, 1, length.out = n), na.rm=T)
+  breaks[!duplicated(breaks)]
+}
+
+quantile_heatmap = function(mat, col_data){
+
+    mat_breaks <- quantile_breaks(mat, n = 11)
+
+    coolwarm_hcl <- colorspace::diverge_hcl(11,
+                                            h = c(250, 10),
+                                            c = 100,
+                                            l = c(37, 88),
+                                            power = c(0.7, 1.7))
+
+    library(pheatmap)
+    # from http://slowkow.com/notes/heatmap-tutorial/
+
+    pheatmap(mat,
+             color = coolwarm_hcl,
+             scale = 'none',
+             breaks = mat_breaks,
+             border_color = NA,
+             show_rownames = FALSE,
+             show_colnames = TRUE,
+             annotation_col = col_data)
+}
+
+```
+
+```{r fig.height=12, fig.width=10, warning=FALSE}
+genes %>%
+  dplyr::select(name, data) %>%
+  unnest() %>%
+  dplyr::select(Norm_Differential_Expression, Sample_Name, name) %>%
+  spread(key = Sample_Name, value = Norm_Differential_Expression, fill = NA) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> gene_expression_matrix
+as_tibble(meta) %>%
+     dplyr::slice(match(colnames(gene_expression_matrix), Sample_Name)) %>%
+     dplyr::select(Condition, Strain) -> meta_sub
+
+num_genes_to_show = 5000
+
+genes %>%
+  filter(Gene_mean > 6) %>%
+  top_n(num_genes_to_show, Gene_sd) %>%
+  pull(name) -> genes_to_show
+
+mat = gene_expression_matrix[genes_to_show,]
+
+meta_sub = meta_sub %>% as.data.frame()
+rownames(meta_sub) = colnames(mat)
+
+quantile_heatmap(mat, meta_sub)
+
+```
+
+
+Generating a gene expression heat-map across all samples, we can see that there is definite structure.
+The largest structures seem to be defined by Condition, However smaller structures are hinted at on a kinase level.
+To explore these further, we use unsupervised methods to cluster the samples.
+
+### Dimensionality reduction on samples reveals distinct condition, kinase, and pathway specific clusters
+
+We collect 300 whole genome gene expression measurements, each with one of 10 conditions, and one of 28 kinases inhibited.
+Clustering of these samples through t-Distributed Stochastic Neighbor Embedding (t-SNE) reduces these samples from ~6000 dimensions (genes) into two.
+Although this representation can not be used to infer properties of the global structure of the sample space, it can be used to identify clusters of similar samples (gene expression profiles)
+
+```{r ref.label='tsne_cluster', eval=FALSE}
+```
+
+```{r}
+library(ggrepel)
+select = dplyr::select
+tsne_plot = function(df){
+ggplot(df,
+       aes(x=TSNE1,
+           y=TSNE2,
+           color = Condition,
+           label = Strain_Code)) +
+  geom_point(size=4) +
+  geom_text_repel(size = 2,
+                  color = 'black',
+                  point.padding = NA,
+                  box.padding = unit(0.01, "lines"))
+}
+```
+
+#### Wild-type samples
+
+Firstly, we will look at the biological replicates in the collected data, 3 or 4 wild-type strains subjected to one of the ten possible conditions.
+
+
+```{r, message = FALSE, fig.width=12, fig.height=10}
+sample_tsne %>% filter(grepl('WT', Strain_Code)) %>% tsne_plot()# + ggtitle('just WT')
+```
+We see that the dimensionality reduction maintains information necessary to group WT cells with each other, and separate out conditions.
+
+#### All samples
+
+Now we look at all the data.
+
+```{r, message = FALSE, fig.width=12, fig.height=10}
+sample_tsne %>% tsne_plot()
+```
+
+We see that samples are generally clustering together based on their condition, or strain.
+This indicates that there are strong, reproducible signals generated at the condition and kinase levels.
+Clusters also seem to be linked to ther clusters through samples that are part of both clusters.
+Interestingly, we also notice that PBS2 and HOG1, do not cluster with other salt samples, but rather cluster together.
+We call this a pathway specific cluster.
+This may be interpreted as follows: although inhibition of these kinases are not similar in a general sense, the effect of inhibiting these kinases are similar in Salt. Salt is a known activator of the hyper-osmotic stress response pathway, of which PBS2 and HOG1 are its MAPKK and MAPK respectively.
+
+We annotate each cluster below as a condition dominated, kinase dominated, or pathway dominated sample cluster below:
+
+![](img/overlayed_clusters_tsne.png)
+
+## A strategy to explore Kinome wide signaling under stress
+
+### Intro
+Kinases are largely responsible for mediating environmental information to the nucleus where an adaptive transcriptional response can be made.
+The propagation of this information occurs through a pathways of cascading phosphorylation events.
+Here we use strains with analog sensitive mutants of certain stress associated kinases to block kinase signaling while under a variety of stress.
+The resulting change in gene expression is then measured using RNA-seq and analyzed.
+
+From this data we hope to characterize three sets of attributes for each gene:
+
+1. The general effect a condition has on the gene.
+2. The general effect the inhibition of a kinase has on the gene.
+3. specific instances of condition + kinase-inhibition pairs that interact such that expression cannot be explained by their marginal effects.
+
+### Full model
+
+To achieve this we first construct a mathematical model for the regulation of each gene.
+
+$$ \Delta E_{ij} = C_{i} + K_{j} + I_{ij} + \epsilon_{ij} $$
+
+Where $\Delta E$ is the change in expression for condition $i$, and kinase-inhibition $j$.
+$C$ is condition independent contribution to the change in expression in condition $i$.
+$K$ is the kinase-inhibition independent contribution to change in expression in kinase-inhibition $j$.
+$I$ is the context dependent contribition to the change in gene experssion under condition $i$ and kinase-inhibition $j$.
+and $\epsilon$ represents noise due to the measurement.
+
+### Approximation
+
+Since modeling the interaction term $I$ explicitly would take exponentially more samples, and make the problem practically unsolvable (not full rank), we construct an approximation to the full model by only considering the independent terms $C$ and $K$.
+
+which yealds:
+
+$$ \Delta E_{ij} \approx C_{i} + K_{j} $$
+
+Which we model as follows:
+
+We construct a linear model, that takes in two input variables, `Condition` and `Kinase` and applies a ordinary least squares regression to predict the change in `Expression` from the reference state as an output variable (reference state is `Condition = YPD` and `Kinase = None`).
+Therefore for each gene, the linear model has the form `Expression ~ Kinase + Condition`.
+
+or
+
+$$ \widehat{\Delta E_{ij}} = C_{i} + K_{j} $$
+
+NOTE: I could just use WT-condition and YPD-kinase here.
+It would be easier to explain, however it would also not have the statistical power that we are using with all 300 data points.
+especially for the kinase sets.
+
+### Residual
+
+Finally, in order to gain insight into the interaction term $I_{ij}$ that we did not model, we calculate the residual $R_{ij}$:
+
+$$  R_{ij} = \Delta E_{ij} - \widehat{\Delta E_{ij}} = I{ij} + \epsilon_{ij} $$
+
+
+### Interpretation
+
+The interpretation of the weights in a linear model are as follows.
+
+The intercept indicates the best approximation to the gene expression for wild-type cells in YPD
+The Condition weight indicates the best approximation to the change that a non-YPD condition will have on a gene.
+(over all kinases)
+The Kinase weight indicates the best approximation to the change caused by inhibiting a given kinase (over all conditions)
+
+```{r ref.label='creat_linear_models', eval=FALSE}
+```
+From these models, we extract weights to address attribute 1 and 2, and residuals for attribute 3.
+Investigation of these values follow in downstream analysis.
+
+Model performance is also assessed to see if a simplistic additive linear (with no interaction term) is capable of modeling the majority of the signal.
+turns out it does pretty well, see supplement for an in-depth analysis.
+
+
+## Condition weights identify generally accepted gene expression responses
+
+### Not sure
+How am i going to show this? is it important?
+
+lets look at the genes and weights clustered in a heat-map. (this is the vector $K$ for each gene)
+
+It is widely accepted that there are condition specific gene expression responses.
+I don't think we have anything new to say here, other than our data also shows this and therefore the gene expression profiles are to be believed.
+
+
+```{r}
+genes %>%
+  select(Gene,weights) %>%
+  unnest() %>%
+  filter(grepl('Condition',term)) -> condition_terms
+
+condition_terms = left_join(condition_terms,t2g)
+
+condition_terms %>%
+  filter(p.value<0.01) %>%
+  ggplot(aes(x=estimate,
+             group=term,
+             color=term)) +
+  geom_density()
+
+condition_terms %>%
+  filter(p.value<0.05) %>%
+  select(name, term, estimate) %>%
+  spread(key = term,
+         value = estimate,
+         fill = 0) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> condition_terms_matrix
+
+  condition_terms_matrix = condition_terms_matrix[apply(condition_terms_matrix,1,function(x) max(x,na.rm=T))>0,]
+  quantile_heatmap(condition_terms_matrix, 
+                   data.frame(row.names = colnames(condition_terms_matrix),
+                              Condtion = colnames(condition_terms_matrix))
+                   )
+
+```
+
+
+
+## Kinase inhibition indicates kinase activity in reference Condition
+
+### Want to show
+Basically.
+I want to start to introduce the logic behind kinase inhibition.
+If the kinase is off in YPD, we do not expect there to be a significant gene expression response when we inhibit it.
+I think one thing we can make a strong claim about is how does a condition modulate a kinase.
+we have all the info.
+first we start with the basal level here.
+then later we use the residual to define context dependent stuff.
+
+This is a heatmap of the $K$ vector for each gene
+
+
+```{r}
+genes %>%
+  select(Gene,weights) %>%
+  unnest() %>%
+  filter(grepl('Strain',term)) -> kinase_terms
+
+kinase_terms = left_join(kinase_terms,t2g)
+
+kinase_terms %>%
+  filter(p.value<0.01) %>%
+  ggplot(aes(x=estimate,
+             group=term,
+             color=term)) +
+  geom_density()
+
+kinase_terms %>%
+  filter(p.value<0.05) %>%
+  select(name, term, estimate) %>%
+  spread(key = term,
+         value = estimate,
+         fill = 0) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> kinase_terms_matrix
+
+kinase_terms_matrix = kinase_terms_matrix[apply(kinase_terms_matrix,1,max)>0,]
+
+quantile_heatmap(kinase_terms_matrix  + rnorm(kinase_terms_matrix,0,.005), 
+                   data.frame(row.names = colnames(kinase_terms_matrix),
+                              Condtion = colnames(kinase_terms_matrix))
+                   )
+
+```
+
+
+
+## Residual analysis reveals context dependent regulation.
+
+### Motivation
+
+So we know that $R_{ij} = I_{ij} + \epsilon_{ij}$
+
+If $\epsilon_{ij}$ is small, then $R_{ij} \approx I_{ij}$
+
+If $\epsilon_{ij}$ is large, then we can not use the above formula, however, since experimental noise is unbiased ($\bar{\epsilon_{ij}} \approx 0$), we can get a strong approximation to $I_{ij}$ for a group of similarly regulated genes:
+
+$\bar{R_{ij}} = \bar{I_{ij}}$ over a set of similarly regulated genes.
+
+We will therefore analyze the residuals of these models to identify context dependent regulation.
+
+Since genes have different variances, we will first normalize the residuals
+
+### Calculation of standard residuals
+
+When using a linear regression model to account for generalizable effects, residuals identify context dependent regulation pathways
+
+We will calculate the standardized residuals for each measurement, where standardized residuals are defined as
+
+$$ S_g = \frac{E_g - \hat{E_g}}{\overline{E_g}} $$
+
+and is by definition normally distributed with zero mean and unit deviation.
+
+```{r ref.label='extract_residuals', eval = FALSE}
+```
+
+### Using gene residual size to predict context dependent regulation
+
+We first assume that $\epsilon \approx 0$.
+
+We extract measurements that have the largest residuals (meaning that they deviate most from the linear model), and look at the combination of condition and kinase inhibition that produced them.
+
+lets take a look at the largest residuals:
+
+```{r, warning=FALSE, message=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+std_residuals %>%
+  arrange(-abs(residual)) %>%
+  left_join(t2g %>% select(Gene, name, description, ext_gene)) %>%
+  separate(sample_id,c('Strain_Code','Condition'), sep='_') %>%
+  filter(Condition %!in% c('YPD','SDC') &
+         !grepl('WT',Strain_Code) &
+         stringr::str_length(ext_gene)!=0) -> top_residuals
+
+
+knitr::kable(top_residuals[1:15,], caption = 'The most significant residuals')
+```
+
+One thing we notice here is that Menadione dominates the residual space.
+Maybe we therefore should normalize the residual by condition and kinase. (Not sure if this is a good idea but here it is for now)
+We also display the independent contributions from condition C and Kinase K.
+
+```{r, warning=FALSE, message=FALSE}
+genes %>%
+ select(name, weights) %>%
+ unnest() %>%
+ select(name, term, estimate, p.value) %>%
+ filter(grepl(pattern = 'Strain', term)) %>%
+ mutate(term = str_replace(term,"^[A-Z][a-z]*",'')) -> strain_weights
+
+genes %>%
+ select(name, weights) %>%
+ unnest() %>%
+ select(name, term, estimate, p.value) %>%
+ filter(grepl(pattern = 'Condition', term)) %>%
+ mutate(term = str_replace(term,"^[A-Z][a-z]*",'')) -> condition_weights
+
+top_residuals %>%
+ group_by(Condition, Strain_Code) %>%
+ mutate(norm_res = residual/sd(residual)) %>%
+ ungroup() %>%
+ dplyr::rename(Strain = Strain_Code) %>%
+ left_join(strain_weights, by = c('name' = 'name', 'Strain' = 'term')) %>%
+ left_join(condition_weights, by = c('name' = 'name', 'Condition' = 'term'), suffix=c('_Strain', '_Condition')) %>%
+ select(name, residual, norm_res, Condition, Strain, ends_with('Condition'), ends_with('Strain')) %>%
+ mutate_at(vars(starts_with('p')), funs(-log10(.))) %>%
+ arrange(-abs(norm_res)) -> top_residuals_with_norm_and_data
+
+top_residuals_with_norm_and_data %>%
+ #select(-residual) %>%
+ #filter(p.value_Condition>2, p.value_Strain>2) %>%
+ top_n(20, norm_res) %>%  knitr::kable()
+```
+
+#### Observations from single gene residual analysis
+
+Looking at these residuals, sorted by magnitude, we see that specific gene-condition-kinase groups have large residuals.
+The largest of these results is the expression of FUS1 in Salt with PBS2 inhibited.
+This can be interpreted as follows.
+The expression levels of FUS1 regularly increase by 1.5 in Salt, and decrease by 1.5 when PBS2 is inhibited.
+However its expression when both Salt and PBS2 as very different from their expected individual contributions.
+In fact the expression is 9 times larger than expected.
+This ultimately means that the expression of FUS1 depends strongly on a process that includes the direct or indirect interaction between Salt Stress and PBS2 activity.
+In this particular instance, it is known that PBS2 is required to repress the mating pathway under hyper-osmotic stress. since both pathways share the MAP3 kinase STE11
+
+
+
+As an example, we are going to look into the mating pathway.
+The mating pathway shares a kinase with the HOG pathway (STE11).
+It is known that mating pathway genes are not expressed during salt stress, and that their repression is due to the activity of the HOG pathway.
+
+We see this phenomenon in our data:
+
+
+```{r}
+top_residuals %>%
+  filter(name == 'FUS1') %>%
+  select(Strain_Code, Condition, residual) %>%
+  group_by(Strain_Code, Condition) %>%
+  summarise_all(mean) %>%
+  ggplot(aes(x = Strain_Code, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('FUS1')
+
+top_residuals %>%
+  filter(name == 'AGA1') %>%
+  select(Strain_Code, Condition, residual) %>%
+  group_by(Strain_Code, Condition) %>%
+  summarise_all(mean) %>%
+  ggplot(aes(x = Strain_Code, y= Condition, fill = residual)) + geom_tile() + scale_fill_gradient2(low = ('cyan'), mid = 'black', high = 'yellow') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle('AGA1')
+
+```
+
+This table is available as a supplemental table saved here:
+
+```{r}
+write.csv(top_residuals_with_norm_and_data, file = '../../output/gene_info.csv')
+```
+
+### Using module residual size to predict context dependent regulation
+
+Since single measurements of genes are subject to noise, we also consider grouping residuals across modules.
+In the case where $\epsilon \not\approx 0)$ this still allows us to estimate a module interaction score since the mean of $\epsilon \approx 0$
+
+In order to define modules, I must first convince the reader that is structure in residuals, and that grouping genes makes sense.
+Gasch has shown that this can be used for expression, I believe Krogan has shown that it can be done for S-scores, Stewart-Ornstein does it for noise profiles. I now do it for residuals from the linear model.
+
+```{r}
+
+annotation_col = data.frame(row.names = colnames(std_resid_matrix),
+                            cname = colnames(std_resid_matrix)) %>%
+                   separate(cname,c('Kinase','Condition'),'_') #%>%
+                   #transmute_all(funs(as.factor))
+
+quantile_heatmap(std_resid_matrix, annotation_col)
+```
+
+From this plot, we can see that genes can be grouped into stereotypical residual patterns. we also see that for the majority of condition kinase combinations, there are little to no residuals. meaning that, as one might expect, that a given condition and kinase do not interact by chance.
+
+#### Defining modules
+
+Here we build up residual patterns from a single gene to a module. In order to do this use a graph based approach, that identifies communities of genes that are highly interconnected.
+
+```{r ref.label='prep_residuals', eval=FALSE}
+```
+
+```{r ref.label='cluster_genes', eval=FALSE}
+```
+
+
+To define a pathway, we use INSPIRE to cluster genes using other datasets.
+
+These clusters were actually generated from orthogonal data (gasch, and pronk datasets)
+NB: for this data I actually also include my data...
+need to fix
+
+#### Extracting additional information from modules
+
+In order to account for noise in measurements, we cluster genes with similar context dependent regulation into modules.
+To gain insight into the these module attributes, we create calculate gene set enrichment, promoter motif, and eigengene analysis on each cluster.
+
+```{r ref.label='gsea', eval=FALSE}
+```
+```{r ref.label='cluster_genes', eval=FALSE}
+```
+```{r ref.label='meme_import', eval=FALSE}
+```
+A comprehensive report on each module can be found at https://mace.shinyapps.io/Cluster_Explorer/
+
+
+### TOR Program cluster? Chat with david
+
+
+## Pbs2 is independently required for activation of (a submodule of) the ESR under stress.
+
+### Claim 1: PBS2 is required for proper activation of GSR
+
+#### Other Evidence
+RNA-seq Evidence: Lower GSR (PC1) Expression in stress with PBS2 strain
+
+```{r}
+ggplot(sample_tsne, aes(x = PC1, y = PC2, color = Strain_Code=='PBS2')) + geom_point() + facet_wrap(~Condition)
+```
+
+Looking at the estimates of $K_{j}$ for the kinases HOG1, PBS2, and PKA for the ESR genes.
+
+```{r}
+top_residuals_with_norm_and_data %>% 
+  left_join(t2g) %>%  
+  mutate(gene_group = if_else(
+    Gene %in% scan('../../input/genes_of_interest_and_gene_sets/ESR/repressed_ESR.txt', what = character()), 'rESR', 
+    if_else(
+      Gene %in% scan('../../input/genes_of_interest_and_gene_sets/ESR/activated_ESR.txt', what = character()), 'iESR', 
+      'Other'))) %>% 
+  filter(Strain %in% c('HOG1', 'PBS2', 'TPK123')) %>% 
+  ggplot(aes(x = estimate_Strain, fill = Strain)) + 
+    geom_density(alpha=.35) + 
+    facet_wrap(~gene_group)
+```
+
+#### Idea:
+Measure ESR activity while removing PBS2
+
+#### Experiment:
+MSN2 Localization in YPD, and glucose dropout with and without PBS2
+HSP12 Expression in YPD, and Glucose dropout with and without PBS2
+
+#### Expect to see:
+Activity go down with PBS2 delete
+
+### Claim 2: PBS2 acts at, or upstream of PKA
+
+#### Idea:
+If upstream: Direct modulation of PKA activity should rescue the PBS2 phenotype.
+
+#### Experiment:
+MSN2 Localization with direct PKA inhibition with and without PBS2
+HSP12 Expression with direct PKA inhibition with and without PBS2
+
+#### Expect to see:
+Direct PKA inhibition to produce same levels of activity, regardless of PBS2 state
+
+#### Results:
+![](img/hsp12_basal_nmpp1_gd.jpg)
+
+### Claim 3: PBS2 acts at or above RAS
+
+#### Idea:
+Does direct modulation of RAS activity rescue the PBS2 phenotype? If so, the effect of PBS2 must be upstream of, or at the level of RAS.
+If not, PBS2 must act somewhere downstream of RAS.
+
+#### Experiment:
+Measure HSP12 activity with RAS held in the active (PKA on, MSN2 cytoplasmic, HSP12 off) followed by PBS2 activation
+
+#### Expect to see:
+MSN2 becomes less nuclear (more cytoplasmic) after PBS2 is inactivated.
+(This requires that the PBS2-as has normal function in the absence of 1-NMPP1)
+
+#### Result:
+
+![](img/salt_exp.jpg)
+
+### Claim 4: PBS2 has a secondary function to Hog1
+
+#### Idea:
+PBS2 has a role that is HOG1 independent.
+this is motivated by differences in gene expression:
+
+```{r}
+sample_tsne %>% mutate(strain_of_interest = ifelse(Strain_Code %in% c('HOG1', 'PBS2'), Strain_Code, 'Other')) %>%
+ggplot(aes(x = PC1, y = PC2, color = strain_of_interest)) + geom_point() + facet_wrap(~Condition)
+```
+
+
+#### Experiment:
+Measure HSP12 activity with a dose response of PKA-as inactivation  with either WT, $\Delta$PBS2, or $\Delta$HOG1
+
+#### Expect to see:
+PBS2 to have a different effect to HOG1, which should look more like WT.
+
+#### Result:
+![](img/dose_curve.jpg)
+![](img/ec50.jpg)
+![](img/hill.jpg)
+
+
+## Bringing it all together to generate thousands of potential causal linear pathways
+
+### Development rules for pathway reconstruction.
+
+From the above results we have the following:
+1. The basal state of the Kinase
+2. The Kinase's General effect on a gene module
+3. The Condition's general effect on a gene module
+4. Evidence for an interaction between Condition and Kinase
+5. Enriched motifs for a gene module.
+
+Bringing these all together, we propose a rule based methodology for building up linear pathways.
+The rules are as follows:
+
+If a module has a significant TF, assume that all regulation goes through that TF.
+If a kinase has a general effect on the module, it regulates that module.
+If a condition affects a module, but does so independently of all kinases, it affects the module directly
+but if a condition affects a module, but its effect is modulated by a kinase, then the condtion affects the module throught the kinase.
+In this case, where condition goes through a kinase, there are two cases, posotive residuals, and negative residuals.
+We also know if the kinase has a basal activity, that when inhibited has an effect of the module, we can therefore also infer what the sign of the edges are in this case:
+
+If a kinase is basally on, and its inhibition increases the expression of the module, and a condition increases the expression of the module, and the residual is negative, double count.
+If a ...
+
+<!-- ### Error modules (groups of error profiles) reveal Known classes of epistatic relationships -->
+<!-- <!-- Class 1 -->
+<!-- The linear model assumes that Kinase identity and Condition identity make independent contributions to gene expression.
+  -->
+
+<!-- 1. If a Condition's effect propagates through a inhibition given Kinase, then the linear model will overestimate gene expression for that Condition-Kinase pair   -->
+<!--     * HSP12 on Salt + PKA (Get GD?) -->
+<!-- 2. If a Kinase's activity is required to correctly regulate a gene's expression in a condition specific manner, the linear model will badly estimate that condition specific interaction (as there is no term to correct for such a fine tuned response) -->
+<!-- 	  * Mating pathway   -->
