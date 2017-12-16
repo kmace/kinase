@@ -93,6 +93,14 @@ col = colorRamp2(
   coolwarm_hcl
 )
 
+# Consistnat coloring on E
+test = quantile_breaks(abs(s), 5)
+col = colorRamp2(
+  c(-rev(test), 0, test)[-c(1, 11)],
+  coolwarm_hcl
+)
+
+
 #col = colorRamp2(c(-3, 0, 3), c("green", "white", "red"))
 
 make_hm = function(mat, ...){
@@ -117,6 +125,20 @@ e_hm = make_hm(E,
     #column_title = expression(Delta~E[ij]),
     row_title = expression(gene[g]),
     top_annotation = sample_ha)
+
+Heatmap(E,
+        col = col,
+        cluster_rows=T,
+        cluster_columns=F,
+        show_row_names=F,
+        show_column_names=F,
+        use_raster = TRUE,
+        raster_quality = 5,
+        name = 'Expression',
+        #column_title = expression(Delta~E[ij]),
+        row_title = expression(gene[g]),
+        top_annotation = sample_ha)
+
 
 ehat_hm = make_hm(E_hat,
     width=10, #unit(4, "in"),

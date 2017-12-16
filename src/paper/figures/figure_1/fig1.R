@@ -33,7 +33,7 @@ make_hm = function(mat, ...){
 sample_ha =  HeatmapAnnotation(sample_meta,
                                col = master_col,
                                show_annotation_name = TRUE,
-                               annotation_legend_param = list(Kinase = list(ncol = 1,
+                               annotation_legend_param = list(Kinase = list(ncol = 2,
                                                                             title_position = "topleft",
                                                                             by_row=FALSE))
                                                                         )
@@ -44,16 +44,15 @@ e_hm = make_hm(exp_matrix,
     cluster_columns = F,
     top_annotation = sample_ha,
     heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
-    use_raster = TRUE,
-    raster_quality = 4)
+    use_raster = FALSE)
 
 
 
-pdf('heatmap.pdf', width = 6, height = 8)
+pdf('~/Desktop/heatmap.pdf', width = 16, height = 9)
 draw(e_hm, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
 dev.off()
 
-png('heatmap.png', res = 300, width = 6, height = 8)
+png('~/Desktop/heatmap.png', res = 300, width = 16, height = 9)
 draw(e_hm, heatmap_legend_side = "bottom")
 dev.off()
 
