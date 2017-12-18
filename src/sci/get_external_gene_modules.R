@@ -74,7 +74,7 @@ gifford_rap_modules = gifford_rap %>% select(module, membership) %>% unnest()
 segal_modules = read_csv('input/external_datasets/module_definitions/segal_modules.csv')
 
 yeastract_path = 'input/external_datasets/module_definitions/yeastract/'
-yeastract_modules = dir(yeastract_path, pattern = 'TwoColumn') %>% as.tibble() %>% separate(value, into = c('n1','n2','Evidence_Source','n3','TF_Type','n4'), remove = F) %>% rename(file_name = value) %>% select(contains('_')) %>% mutate(file_path = file.path(yeastract_path, file_name)) %>% group_by(file_path) %>% mutate(dat = file_path %>% map(load_binary_yeastract_regulation_table)) %>% unnest() ungroup() %>% split(.$file_name)
+yeastract_modules = dir(yeastract_path, pattern = 'TwoColumn') %>% as.tibble() %>% separate(value, into = c('n1','n2','Evidence_Source','n3','TF_Type','n4'), remove = F) %>% rename(file_name = value) %>% select(contains('_')) %>% mutate(file_path = file.path(yeastract_path, file_name)) %>% group_by(file_path) %>% mutate(dat = file_path %>% map(load_binary_yeastract_regulation_table)) %>% unnest() %>% ungroup() %>% split(.$file_name)
 
 yetfasco_modules = load_probBinding_yetfasco_regulation_table('input/external_datasets/module_definitions/yetfasco/20120129_allMotifData1.02.rdat') %>% filter(expert & log_prob_bind > -0.1)  %>% group_by(TF,Target) %>% summarise(ev_size = n()) %>% ungroup() %>% filter(str_length(TF)>0) %>% rename(module = TF, Gene = Target)
 
