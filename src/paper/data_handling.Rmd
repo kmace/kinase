@@ -9,28 +9,26 @@ This notebook takes us from the DESeq2 normalized data, to all the data that is 
 ```{r data_loading}
 
 rm(list=ls())
+library(tidyverse)
+library(magrittr)
+library(broom)
 
 load('../../intermediate/images/normalized_data.RData')
-load('../../intermediate/images/externally_defined_modules.RData')
+modules = read_csv('../../intermediate/external_modules.csv')
+wt_results = read_csv('../../intermediate/wt_results.csv')
+conditional_results = read_csv('../../intermediate/conditional_results.csv')
 
-library(tidyr)
-library(purrr)
-library(dplyr)
-library(broom)
-library(tibble)
-library(magrittr)
 
 measurements = vlog %>%
   as.data.frame %>%
-  rownames_to_column("Gene") %>%
+  rownames_to_column("name") %>%
   as_tibble %>%
-  gather(Sample_Name, Expression, -Gene)
+  gather(Sample_Name, Expression, -name)
 
 rm(vlog)
 
 meta = as_tibble(meta)
 
-colnames(t2g)[1] = 'Gene'
 t2g = as_tibble(t2g)
 
 # should be a left join on the meta subsetted
@@ -40,7 +38,7 @@ measurements = left_join(measurements, meta_sub)
 
 # Remove known bad sample
 
-measurements %<>% filter(Strain_Code != 'WT1' | Condition != 'Rapamycin')
+measurements %<>% dplyr::filter(Strain_Code != 'WT1' | Condition != 'Rapamycin')
 
 ```
 
@@ -70,7 +68,7 @@ measurements = measurements %>% group_by(Gene, Condition) %>%
                 ungroup()
 
 genes = measurements %>%
-  group_by(Gene) %>%
+  group_by(name) %>%
   mutate(Differential_Expression = Expression - mean(Expression),
          Norm_Differential_Expression = Differential_Expression / sd(Expression)) %>%
   nest() %>%
@@ -86,7 +84,7 @@ create the linear model and extract model data:
 
 ```{r create_linear_models}
 
-genes %<>%
+genes %<>% dplyr::filter(Gene_mean > 5) %>%
   mutate(model = map(data, ~lm(Expression ~ Strain + Condition, data = .))) %>%
   mutate_at(.vars = vars(model),
             .funs = funs(performance = map(.,glance),

@@ -1,6 +1,0 @@
-Figure 1: Data collection strategy
-
-(A) Analog enabled inhibition of Kinase signaling
-(B) Experimental Procedure
-(C) Sample clustering in TSNE space
-(D) Full data matrix

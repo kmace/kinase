@@ -22,3 +22,11 @@
 *.jpg
 
 src/paper/report_cache/
+
+*.apxl
+
+*.txt
+
+*.csv
+
+*.fasta

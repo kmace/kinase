@@ -2,7 +2,7 @@ library(rvest)
 library(tidyverse)
 library(data.table)
 library(magrittr)
-
+# you need to import t2g data to have this work
 
 load_binary_yeastract_regulation_table = function(file, sep = ';') {
   reg = fread(file,
@@ -62,21 +62,31 @@ scrape_gifford = function(p){
 
 # YPD Modules
 gifford_ypd = scrape_gifford('https://images.nature.com/original/nature-assets/nbt/journal/v21/n11/extref/nbt890-S3.htm')
-gifford_ypd_modules = gifford_ypd %>% select(module, membership) %>% unnest()
+gifford_ypd_modules = gifford_ypd %>% select(module, membership) %>% unnest() %>% mutate(source='gifford_ypd')%>% select(-name, -desc)
 
 # Rapamycin Modules
 gifford_rap = scrape_gifford('https://images.nature.com/original/nature-assets/nbt/journal/v21/n11/extref/nbt890-S8.htm')
-gifford_rap_modules = gifford_rap %>% select(module, membership) %>% unnest()
-
-
+gifford_rap_modules = gifford_rap %>% select(module, membership) %>% unnest() %>% mutate(source='gifford_rap') %>% select(-name, -desc)
 
 # segal modules
-segal_modules = read_csv('input/external_datasets/module_definitions/segal_modules.csv')
+segal_modules = read_csv('input/external_datasets/module_definitions/segal_modules.csv') %>% mutate(source='segal') %>% select(-module_num)
 
 yeastract_path = 'input/external_datasets/module_definitions/yeastract/'
-yeastract_modules = dir(yeastract_path, pattern = 'TwoColumn') %>% as.tibble() %>% separate(value, into = c('n1','n2','Evidence_Source','n3','TF_Type','n4'), remove = F) %>% rename(file_name = value) %>% select(contains('_')) %>% mutate(file_path = file.path(yeastract_path, file_name)) %>% group_by(file_path) %>% mutate(dat = file_path %>% map(load_binary_yeastract_regulation_table)) %>% unnest() %>% ungroup() %>% split(.$file_name)
 
-yetfasco_modules = load_probBinding_yetfasco_regulation_table('input/external_datasets/module_definitions/yetfasco/20120129_allMotifData1.02.rdat') %>% filter(expert & log_prob_bind > -0.1)  %>% group_by(TF,Target) %>% summarise(ev_size = n()) %>% ungroup() %>% filter(str_length(TF)>0) %>% rename(module = TF, Gene = Target)
+yeastract_modules = dir(yeastract_path, pattern = 'TwoColumn') %>%
+  as.tibble() %>%
+  separate(value, into = c('n1','n2','Evidence_Source','n3','TF_Type','n4'), remove = F) %>%
+  rename(file_name = value) %>%
+  select(contains('_')) %>%
+  mutate(file_path = file.path(yeastract_path, file_name)) %>%
+  group_by(file_path) %>%
+  mutate(dat = file_path %>% map(load_binary_yeastract_regulation_table)) %>%
+  unnest() %>%
+  ungroup()# %>% split(.$file_name)
+
+yeastract_modules %<>% mutate(module = paste(module,TF_Type, Evidence_Source, sep = '_'),
+                              source = str_replace(file_name,'RegulationTwoColumnTable_Documented_','') %>% str_replace('.tsv','')) %>% select(module, name, source)
+#yetfasco_modules = load_probBinding_yetfasco_regulation_table('input/external_datasets/module_definitions/yetfasco/20120129_allMotifData1.02.rdat') %>% filter(expert & log_prob_bind > -0.1)  %>% group_by(TF,Target) %>% summarise(ev_size = n()) %>% ungroup() %>% filter(str_length(TF)>0) %>% rename(module = TF, Gene = Target)
 
 # 1) biochemical pathway common name 	- name of the biochemical pathway, as stored in SGD
 # (mandatory)
@@ -97,4 +107,27 @@ sgd_factor_modules = sgd_factor %>% rename(module = Gene.regulatoryRegions.facto
 sgd_phenotype_modules = sgd_phenotype %>% rename(name =Phenotype.genes.symbol, module = Phenotype.observable)
 sgd_go_modules = sgd_go %>% rename(name = Gene.symbol, module = Gene.goAnnotation.ontologyTerm.name)
 
-save(list = ls()[grep('module', ls())], file = "intermediate/images/externally_defined_modules.RData", envir = .GlobalEnv)
+
+prep = function(x, filesource=NA){
+  keep = colnames(x) %in% c('module', 'name', 'Gene', 'source')
+  y = x[,keep]
+  y = left_join(y, t2g)
+  if(!('source' %in% colnames(y))){
+    y$source = filesource
+  }
+  return(y)
+}
+
+modules = rbind(
+  prep(gifford_ypd_modules),
+  prep(gifford_rap_modules),
+  prep(segal_modules),
+  prep(sgd_biochem_pathway_modules, 'biochem'),
+  prep(sgd_go_modules, 'go'),
+  prep(sgd_factor_modules, 'factor'),
+  prep(sgd_pathways_modules, 'pathway'),
+  prep(sgd_phenotype_modules, 'phenotype'),
+  prep(yeastract_modules)
+  )
+
+write_csv(modules, 'intermediate/external_modules.csv')
