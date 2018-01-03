@@ -15,38 +15,91 @@ meta = meta %>% mutate(Condition = if_else(Stress=='None',
                                            ))
 meta$Condition = relevel(factor(meta$Condition), 'YPD')
 
+meta %<>% filter(Drug == 'Cocktail')
+meta %<>% filter(!(Prep.QC == 'MARGINAL' & Sample_Name == '28r'))
+
 raw_counts = load_count_matrix(meta,'star')
 
-subset = meta$Experimenter == 'Kieran' & meta$Drug == 'Cocktail'
-meta = meta[subset, ]
-raw_counts = raw_counts[, subset]
-rm(subset) # clean unused variables
-
-dds = DESeqDataSetFromMatrix(countData = raw_counts, colData = meta, ~ Condition + Strain)
+raw_counts = rename_gene_names(raw_counts, t2g)
 
 
-dds = DESeq(dds, parallel = TRUE)
 
-# This takes an incredibly long time
-# rlt = rlogTransformation(dds, blind = FALSE)
-# rlog = assay(rlt)
-# meta = colData(rlt)
+#meta = meta %>% filter(Strain != 'CDC15')
+meta$Strain = droplevels(meta$Strain)
+meta$Condition = droplevels(meta$Condition)
 
-# This takes a very ling time
+library("BiocParallel")
+register(MulticoreParam(20))
+
+library(DESeq2)
+
+dds = DESeqDataSetFromMatrix(countData = raw_counts[,meta$Sample_Name], colData = meta, ~1)
+dds = estimateSizeFactors(dds)
+normalized_counts = counts(dds, normalized=TRUE)
+
+# Full design, include everything:
+meta_sub = meta[meta$Strain!='CDC15',]
+meta_sub$Strain = droplevels(meta_sub$Strain)
+design = model.matrix(~Condition + Strain + Condition:Strain, meta_sub)
+all.zero <- apply(design, 2, function(x) all(x==0))
+idx <- which(all.zero)
+design <- design[,-idx]
+DESeq2:::checkFullRank(design)
+
+dds_full = DESeq(dds[,dds$Strain!='CDC15'], full = design, parallel = TRUE)
+
+# Normilized data, taking full design into account
+vst_full = varianceStabilizingTransformation(dds_full, blind = FALSE)
+vlog_full = assay(vst_full)
+
+# Only model the General effects:
+dds_reduced = dds
+dds_reduced@design = ~ Condition + Strain
+dds_reduced = DESeq(dds_reduced, parallel = TRUE)
+
+# One could also use the reduced model, ~Condition + Strain
+# to estimate the dispersion. this is what I've been using this whole time come to think of it.
+# Normilized data, taking reduced design into account
+vst_reduced = varianceStabilizingTransformation(dds_reduced, blind = FALSE)
+vlog_reduced = assay(vst_reduced)
+
+# Only model the Condition effects on wt:
+dds_wt = dds[,dds$Strain=='WT']
+dds_wt@design = ~Condition
+dds_wt = DESeq(dds_wt, parallel = TRUE)
+
+# Normilized data, taking wt dispersion into account
+dispersionFunction(dds) <- dispersionFunction(dds_wt)
 vst = varianceStabilizingTransformation(dds, blind = FALSE)
 vlog = assay(vst)
-meta = as.data.frame(colData(vst))
 
-# This is pretty quick
-# baseMean <- rowMeans(counts(dds, normalized=TRUE))
-# idx <- sample(which(baseMean > 5), 1000)
-# dds.sub <- dds[idx, ]
-# dds.sub <- estimateDispersions(dds.sub)
-# dispersionFunction(dds) <- dispersionFunction(dds.sub)
-# rm(dds.sub)
-# vst <- varianceStabilizingTransformation(dds, blind=FALSE)
-# vlog = assay(vst)
-# meta = colData(vst)
+vst_blind = varianceStabilizingTransformation(dds, blind = TRUE)
+vlog_blind = assay(vst_blind)
 
-save(file = '../../input/images/normalized_data.RData',
-     list = c('vlog', 'meta', 't2g'))
+#dds_lrt = dds[,colData(dds)$Strain != 'CDC15']
+#dds_lrt = dds_lrt[,colData(dds)$Condition != 'Menadione']
+#colData(dds_lrt)$Strain = droplevels(colData(dds_lrt)$Strain)
+#colData(dds_lrt)$Condition = droplevels(colData(dds_lrt)$Condition)
+#m1 = model.matrix(~Strain*Condition, colData(dds_lrt))
+#m2 = model.matrix(~Strain + Condition, colData(dds_lrt))
+
+#all.zero <- apply(m1, 2, function(x) all(x==0))
+#idx <- which(all.zero)
+#m1 <- m1[,-idx]
+#dds_lrt = DESeq(dds_lrt, test = 'LRT', full = m1, reduced = m2, betaPrior = FALSE)
+
+
+
+meta = as_tibble(meta)
+t2g$Gene = t2g$target_id
+t2g = as_tibble(t2g)
+
+
+save(file = '../../intermediate/images/normalized_data.RData',
+     list = c('meta', 't2g', 'raw_counts', 'normalized_counts',
+              'dds', 'vst', 'vlog', 'vst_blind', 'vlog_blind', # dispersions from WT
+              'dds_full', 'vst_full', 'vlog_full',
+              'dds_reduced', 'vst_reduced', 'vlog_reduced',
+              'dds_wt',
+              'dds', 'vst_blind', 'vlog_blind'
+     ))
