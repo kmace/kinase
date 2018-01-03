@@ -18,14 +18,22 @@ library(dplyr)
 library(broom)
 library(tibble)
 library(magrittr)
-
-measurements = vlog %>%
+library(forcats)
+meta$Condition = fct_recode(meta$Condition, GlucoseDepletion = 'Glucose_Depletion')
+raw_log = log2(raw_counts + 1)
+measurements = raw_log %>% # vlog
   as.data.frame %>%
   rownames_to_column("Gene") %>%
   as_tibble %>%
   gather(Sample_Name, Expression, -Gene)
 
-rm(vlog)
+blind_measurements = vlog_blind %>%
+  as.data.frame %>%
+  rownames_to_column("Gene") %>%
+  as_tibble %>%
+  gather(Sample_Name, Blind_Expression, -Gene)
+
+#rm(vlog)
 
 meta = as_tibble(meta)
 
@@ -35,7 +43,7 @@ t2g = as_tibble(t2g)
 # should be a left join on the meta subsetted
 meta_sub = meta %>% select(Sample_Name, Condition, Strain, Strain_Code)
 
-measurements = left_join(measurements, meta_sub)
+measurements = measurements %>% left_join(blind_measurements) %>% left_join(meta_sub)
 
 # Remove known bad sample
 
@@ -113,14 +121,14 @@ genes %>%
   unnest() %>%
 ggplot(aes(x=Gene_mean, y = r.squared)) +
   geom_point() +
-  geom_vline(xintercept = 6) # TODO change this all to 5.5
+  geom_vline(xintercept = 5) # TODO change this all to 5.5
 ```
 
 It seems $R^2$ looks pretty bad when gene mean is below 5.5, probably becuase these genes are dominated by noise. lets therefore filter them out, and be save by filtering at 6:
 
 ```{r gene_filter}
 genes %<>%
-  filter(Gene_mean > 6) #TODO change this to 5.5 used to be mean > 6 to get all the good linear models. 3.6 seems good when looking at sd vs mean
+  filter(Gene_mean > 5) #TODO change this to 5.5 used to be mean > 6 to get all the good linear models. 3.6 seems good when looking at sd vs mean
 ```
 
 
