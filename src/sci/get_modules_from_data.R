@@ -53,20 +53,20 @@ filter_samples = function(exp){
 }
 
 get_module_from_exp = function(datExpr){
-    network_type = 'signed'
+    #network_type = 'signed'
     powers = c(1:40)
     sft = pickSoftThreshold(datExpr,
                             powerVector = powers,
-                            verbose = 5,
+                            verbose = 5)#,
                             # corFnc = bicor,
                             # corOptions = list(maxPOutliers = 0.05),
-                            networkType = network_type)
+                            #networkType = network_type)
 
     sft_table = sft$fitIndices
     print(names(sft))
     net = blockwiseModules(datExpr,
                            power = sft$powerEstimate,
-                           networType = network_type,
+                           #networType = network_type,
                            # corType = 'bicor',
                            # corOptions = list(maxPOutliers = 0.05),
                            minModuleSize = 15,
