@@ -20,10 +20,9 @@ conditional_results = read_csv('../../intermediate/conditional_results.csv')
 
 
 meta$Condition = fct_recode(meta$Condition, GlucoseDepletion = 'Glucose_Depletion')
-raw_log = log2(raw_counts + 1)
+raw_log = log2(normalized_counts + 1)
 
 measurements = vlog %>%
-
   as.data.frame %>%
   rownames_to_column("name") %>%
   as_tibble %>%
@@ -31,9 +30,21 @@ measurements = vlog %>%
 
 blind_measurements = vlog_blind %>%
   as.data.frame %>%
-  rownames_to_column("Gene") %>%
+  rownames_to_column("name") %>%
   as_tibble %>%
-  gather(Sample_Name, Blind_Expression, -Gene)
+  gather(Sample_Name, Blind_Expression, -name)
+
+full_measurements = vlog_blind %>%
+  as.data.frame %>%
+  rownames_to_column("name") %>%
+  as_tibble %>%
+  gather(Sample_Name, Full_Expression, -name)
+
+raw_measurements = raw_log %>%
+  as.data.frame %>%
+  rownames_to_column("name") %>%
+  as_tibble %>%
+  gather(Sample_Name, Raw_Expression, -name)
 
 #rm(vlog)
 
@@ -44,7 +55,11 @@ t2g = as_tibble(t2g)
 # should be a left join on the meta subsetted
 meta_sub = meta %>% select(Sample_Name, Condition, Strain, Strain_Code)
 
-measurements = measurements %>% left_join(blind_measurements) %>% left_join(meta_sub)
+measurements = measurements %>% 
+  left_join(blind_measurements) %>%
+  left_join(raw_measurements) %>% 
+  left_join(full_measurements) %>% 
+  left_join(meta_sub)
 
 # Remove known bad sample
 
@@ -64,7 +79,7 @@ is_outlier <- function(v, coef=1.5){
 }
 
 
-measurements = measurements %>% group_by(Gene, Condition) %>%
+measurements = measurements %>% left_join(t2g) %>% group_by(Gene, Condition) %>%
                 mutate(is_condition_outlier = is_outlier(Expression),
                        condition_outlier = ifelse(is_condition_outlier,
                                                   as.character(Strain),
@@ -94,7 +109,7 @@ create the linear model and extract model data:
 
 ```{r create_linear_models}
 
-genes %<>% dplyr::filter(Gene_mean > 5) %>%
+genes %<>% #dplyr::filter(Gene_mean > 5) %>%
   mutate(model = map(data, ~lm(Expression ~ Strain + Condition, data = .))) %>%
   mutate_at(.vars = vars(model),
             .funs = funs(performance = map(.,glance),
@@ -122,14 +137,14 @@ genes %>%
   unnest() %>%
 ggplot(aes(x=Gene_mean, y = r.squared)) +
   geom_point() +
-  geom_vline(xintercept = 5) # TODO change this all to 5.5
+  geom_vline(xintercept = 6) # TODO change this all to 5.5
 ```
 
 It seems $R^2$ looks pretty bad when gene mean is below 5.5, probably becuase these genes are dominated by noise. lets therefore filter them out, and be save by filtering at 6:
 
 ```{r gene_filter}
 genes %<>%
-  filter(Gene_mean > 5) #TODO change this to 5.5 used to be mean > 6 to get all the good linear models. 3.6 seems good when looking at sd vs mean
+  filter(Gene_mean > 6) #TODO change this to 5.5 used to be mean > 6 to get all the good linear models. 3.6 seems good when looking at sd vs mean
 ```
 
 
@@ -234,7 +249,7 @@ dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM,
 deepSplit = 2, pamRespectsDendro = FALSE,
 minClusterSize = minModuleSize);
 
-modules = data.frame(module = dynamicMods, 
+modules_yeastnet = data.frame(module = dynamicMods, 
                      Gene = rownames(adj_inv_logit)) %>%
   left_join(t2g)
 
@@ -242,7 +257,8 @@ modules = data.frame(module = dynamicMods,
 #                  name = colnames(resid)) %>%
 #                    group_by(module) %>%
 #                    nest(.key = genes)
-
+modules_yeastnet$source = 'yeastnet'
+modules %<>% rbind(modules_yeastnet)
 ```
 
 
@@ -250,35 +266,36 @@ modules = data.frame(module = dynamicMods,
 
 Lets get all the addtional information for each module
 ```{r eigengenes}
-MEs = moduleEigengenes(t(vlog[modules$Gene[modules$Gene %in% rownames(vlog)],]), 
-                 modules$module[modules$Gene %in% rownames(vlog)], 
-                 impute = TRUE, 
-                 nPC = 1, 
-                 align = "along average", 
-                 excludeGrey = FALSE, 
-                 grey = if (is.numeric(colors)) 0 else "grey",
-                 subHubs = TRUE,
-                 softPower = 6,
-                 scale = TRUE,
-                 verbose = 0, indent = 0)$eigengenes
-
-MEsCor = cor(MEs)
+# MEs = moduleEigengenes(t(vlog[modules$Gene[modules$Gene %in% rownames(vlog)],]), 
+#                  modules$module[modules$Gene %in% rownames(vlog)], 
+#                  impute = TRUE, 
+#                  nPC = 1, 
+#                  align = "along average", 
+#                  excludeGrey = FALSE, 
+#                  grey = if (is.numeric(colors)) 0 else "grey",
+#                  subHubs = TRUE,
+#                  softPower = 6,
+#                  scale = TRUE,
+#                  verbose = 0, indent = 0)$eigengenes
+# 
+# MEsCor = cor(MEs)
 
 
 ```
 
 ```{r module_avg_residual}
-module_raw_residuals = raw_residuals %>% 
-  left_join(modules) %>% 
-  group_by(module, sample_id) %>% 
-  summarize(residual = mean(residual)) %>% 
-  ungroup()
+# module_raw_residuals = raw_residuals %>% 
+  # left_join(modules) %>% 
+#   group_by(module, sample_id) %>% 
+#   summarize(residual = mean(residual)) %>% 
+#   ungroup()
+# 
+# module_std_residuals = std_residuals %>% 
+#   left_join(modules) %>% 
+#   group_by(module, sample_id) %>% 
+#   summarize(residual = mean(residual)) %>% 
+#   ungroup()
 
-module_std_residuals = std_residuals %>% 
-  left_join(modules) %>% 
-  group_by(module, sample_id) %>% 
-  summarize(residual = mean(residual)) %>% 
-  ungroup()
 ```
 
 Lets get go enrichment for each module
@@ -296,25 +313,25 @@ Lets get go enrichment for each module
 Now lets export the modules for meme analysis
 
 ```{r meme_prep}
-cluster_dir = '../../intermediate/clusters/WGCNA'
-output_dir = paste0(cluster_dir, '/gene_lists')
-dir.create(output_dir, recursive = TRUE)
-
-library(readr)
-
-write_genes = function(df, output_dir){
-  write(df$name,
-        file = paste0(output_dir,
-                      '/cluster_',
-                      unique(df$module),
-                      '.txt')
-        )
-}
-
-modules %>%
-  split(.$module) -> by_module
-
-lapply(by_module, function(x) write_genes(x, output_dir))
+# cluster_dir = '../../intermediate/clusters/WGCNA'
+# output_dir = paste0(cluster_dir, '/gene_lists')
+# dir.create(output_dir, recursive = TRUE)
+# 
+# library(readr)
+# 
+# write_genes = function(df, output_dir){
+#   write(df$name,
+#         file = paste0(output_dir,
+#                       '/cluster_',
+#                       unique(df$module),
+#                       '.txt')
+#         )
+# }
+# 
+# modules %>%
+#   split(.$module) -> by_module
+# 
+# lapply(by_module, function(x) write_genes(x, output_dir))
 
 ```
 
@@ -322,7 +339,7 @@ lapply(by_module, function(x) write_genes(x, output_dir))
   Run MEME
 
 ```{bash meme}
-bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermediate/clusters/WGCNA
+#bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermediate/clusters/WGCNA
 
 ```
 
@@ -333,47 +350,61 @@ bash src/scripts/meme/run_all.sh intermediate/clusters/WGCNA/gene_lists intermed
   # After meme is run:
 ```{r meme_import}
 
-module_tfs = do.call(rbind,
-lapply(dir(paste0(cluster_dir, '/tfs/')),
-function(x) {
-  path = paste0(cluster_dir, '/tfs/', x)
-  if(file.size(path) > 0) {
-    return(data.frame(file = x,
-                      TF = read.table(path, stringsAsFactors = F))
-           )
-  }
-})) %>%
- as_tibble %>%
- separate(file, c('c', 'module', 't'), sep = '_') %>%
- dplyr::rename(TF = V1) %>%
- dplyr::select(module, TF)
+# module_tfs = do.call(rbind,
+# lapply(dir(paste0(cluster_dir, '/tfs/')),
+# function(x) {
+#   path = paste0(cluster_dir, '/tfs/', x)
+#   if(file.size(path) > 0) {
+#     return(data.frame(file = x,
+#                       TF = read.table(path, stringsAsFactors = F))
+#            )
+#   }
+# })) %>%
+#  as_tibble %>%
+#  separate(file, c('c', 'module', 't'), sep = '_') %>%
+#  dplyr::rename(TF = V1) %>%
+#  dplyr::select(module, TF)
 ```
 
+
+Play
+
+```{r}
+genes %>%
+select(data, data_augment, name) %>%
+unnest() -> mod
+
+wt_results$condition[wt_results$condition=='Glucose'] = 'Glucose_Depletion'
+
+conditional_results %>% dplyr::rename(Condition = condition, Strain = Kinase) %>% left_join(mod) -> out
+
+g = out %>% filter(Condition == 'Tunicamycin' & Strain == 'IRE1') %>% ggplot(aes(color=log2FoldChange, y = .resid, label = paste(name, Strain, Condition), x = .std.resid)) + geom_point()
+ggplotly(g)
+
+conditional_results %>% select(log2FoldChange, condition, Kinase, name) %>% dplyr::rename(c_l2fc = log2FoldChange) %>% left_join(wt_results %>% select(log2FoldChange, condition, name) %>% dplyr::rename(wt_l2fc = log2FoldChange)) -> out 
+
+
+p = out %>% filter(Kinase == 'YPK1') %>% group_by(condition) %>% mutate(fit_text = lm_eqn(c_l2fc,wt_l2fc)) %>% ggplot(aes(x = wt_l2fc, y=c_l2fc, label = name)) + geom_point() + stat_smooth_func(geom="text",method="lm",hjust=0,parse=TRUE, ypos = -10, xpos = -7) + geom_smooth(method = 'lm') + facet_wrap(~condition)
+
+```
 
 
 ```{r data_saving}
-save(list = c('std_resid_matrix',
-              'std_residuals',
-              'raw_resid_matrix',
-              'raw_residuals',
-              "module_raw_residuals",
-              "module_std_residuals",
-              "MEsCor",
-              "MEs",
-              'genes',
-              'meta',
-              'modules',
-              'module_tfs',
-              'sample_tsne',
-              't2g'),
-     file = '../../intermediate/images/paper_data.RData')
+# save(list = c('std_resid_matrix',
+#               'std_residuals',
+#               'raw_resid_matrix',
+#               'raw_residuals',
+#               "module_raw_residuals",
+#               "module_std_residuals",
+#               "MEsCor",
+#               "MEs",
+#               'genes',
+#               'meta',
+#               'modules',
+#               'module_tfs',
+#               'sample_tsne',
+#               't2g'),
+     save.image(file = '../../intermediate/images/paper_data.RData')
 ```
 
-```{r relative_importance}
-# library(relaimpo)
-# getri = function(mod){
-# r = calc.relimp(mod, type = c('last'))@last
-# return(r)
-# }
-# lasts = do.call(rbind, lapply(models$Full_model, getri))
-```
+
