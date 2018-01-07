@@ -1,21 +1,15 @@
-library(stringr)
-library(DESeq2)
 library(tidyverse)
 library(magrittr)
+library(stringr)
+library(DESeq2)
 load('../../intermediate/images/normalized_data.RData')
 
-res = lapply(resultsNames(dds_wt)[-1], function(x) {
-  r = results(dds_wt,
-              name = x,
-              tidy = TRUE) %>%
-    as_tibble %>%
-    dplyr::rename(name = row) %>%
-    arrange(pvalue) %>%
-    dplyr::filter(padj<0.05) %>%
-    mutate(term = x)
-})
-wt_results = do.call('rbind', res)
-wt_results %<>% mutate(condition = word(term,2,sep = '_'))
+wt_results = resultsNames(dds_wt)[-1] %>%
+  map_dfr(~ lfcShrink(dds_wt, coef=.x) %>% # Use this when betaPrior was FALSE
+            as.data.frame %>%
+            as_tibble(rownames = 'name') %>%
+            mutate(term = .x)) %>%
+  mutate(condition = word(term,2,sep = '_'))
 
 lapply(levels(dds$Condition)[-1], function(cond){
   dds_cond = dds[,dds$Condition==cond]
@@ -23,22 +17,20 @@ lapply(levels(dds$Condition)[-1], function(cond){
   dds_cond@design = ~Strain
   dds_cond = DESeq(dds_cond, parallel = F)
   res = lapply(resultsNames(dds_cond)[-1], function(x) {
-    r = results(dds_cond,
-                name = x,
-                tidy = TRUE) %>%
-      as_tibble %>%
-      dplyr::rename(name = row) %>%
+    r = lfcShrink(dds_cond,
+                  coef = x) %>%
+    #r = results(dds_cond, name = x, independentFiltering = FALSE) %>%
+      as.data.frame() %>%
+      as_tibble(rownames = 'name') %>%
       arrange(pvalue) %>%
-      dplyr::filter(padj<0.05) %>%
       mutate(term = x, condition = cond)
   })
   results_tbl = do.call('rbind', res)
   return(results_tbl)
 }) -> big_res
-conditional_results = do.call('rbind', big_res)
-conditional_results %<>% mutate(Kinase = str_extract(term, '([A-z]{3}[0-9]{1,4})'))
+per_condition_subset_results = do.call('rbind', big_res) %>%
+  mutate(Kinase = str_extract(term, '([A-z]{3}[0-9]{1,4})'))
 
-write_csv(conditional_results, path='../../intermediate/conditional_results.csv')
+write_csv(per_condition_subset_results, path='../../intermediate/per_condition_subset_results.csv')
 write_csv(wt_results, path='../../intermediate/wt_results.csv')
-
 
