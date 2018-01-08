@@ -18,7 +18,10 @@ meta$Condition = relevel(factor(meta$Condition), 'YPD')
 
 meta %<>% filter(Drug == 'Cocktail')
 meta %<>% filter(!(Prep.QC == 'MARGINAL' & Sample_Name == '28r'))
-meta %<>% filter(Sample_Name != '28h')
+
+throw = read_csv('../../intermediate/Samples_to_thow_out.csv') %>% left_join(meta)
+
+meta %<>% filter(!(Sample_Name %in% throw$Sample_Name))
 
 
 raw_counts = load_count_matrix(meta,'star')
