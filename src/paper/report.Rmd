@@ -26,7 +26,9 @@ unlink('temp')
 ```{r paper_setup, echo=FALSE, message=FALSE}
 library(tidyverse)
 library(stringr)
+
 load('../../intermediate/images/paper_data.RData')
+source('pipeline/colors.R')
 ```
 
 ```{r, child='abstract.Rmd'}

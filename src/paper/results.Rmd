@@ -130,6 +130,23 @@ We annotate each cluster below as a condition dominated, kinase dominated, or pa
 
 ![](img/overlayed_clusters_tsne.png)
 
+
+## Identification of Kinase's who's activity is required for an accurate gene expression response to a given condition. 
+
+### Salt heatmap
+
+Notice that PBS2 HOG1 CDC15 and STE11 are all outliers in this heatmap. meaning that their activiy is required to accurately recreate yeasts transcirptional response to salt
+
+#### Note:
+All the other heatmaps of this type should go to the supplement. 
+
+### Full network
+
+We then manually go through every condtion and identify Kianses in a similar way to above. resulting in these interations. (have as csv table, but render as a network)
+
+## Kinase's who have simiar inactivation patturns across many conditions are likely to be in similar pathays and are potentially epistatic to each other. 
+
+
 ## A strategy to explore Kinome wide signaling under stress
 
 ### Intro
