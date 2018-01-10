@@ -1,0 +1,70 @@
+---
+title: "Tunicamycin"
+output: html_notebook
+---
+
+Here we perform an individual analysis of the Tunicamycin Condition.
+
+# Extract the data:
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(edgeR)
+#library(DEFormats)
+meta = read_csv('../../intermediate/meta_clean.csv') %>%
+  mutate(Strain = relevel(factor(Strain), ref = 'WT'),
+         Condition = relevel(factor(Condition), ref = 'YPD'))
+t2g = read_csv('../../intermediate/t2g.csv')
+
+meta_wt = meta %>% filter(Strain == 'WT')
+counts_wt = readDGE(meta_wt$star_path, columns = c(1,3), labels = meta_wt$Experiment)[-c(1:3),]
+meta_tm = meta %>% filter(Condition == 'Tunicamycin')
+counts_tm = readDGE(meta_tm$star_path, columns = c(1,3), labels = meta_tm$Experiment)[-c(1:3),]
+
+```
+
+
+# Defining the Tunicamycin Program in WT cells 
+```{r}
+library(DESeq2)
+dds_wt = DESeqDataSetFromMatrix(counts_wt, colData = meta_wt, ~Condition)
+dds_wt %<>% DESeq()
+
+wt_res = results(dds_wt, 
+                 name = "Condition_Tunicamycin_vs_YPD",
+                 lfcThreshold = .5,
+                 independentFiltering = FALSE)
+
+wt_res = lfcShrink(dds_wt, 
+                   coef = "Condition_Tunicamycin_vs_YPD", 
+                   res = wt_res)
+
+plotMA(wt_res)
+
+```
+
+Okay, so there are some differentially expressed genes. what are they?
+
+Lets get the repressed in Tunicamycin Genes:
+```{r}
+wt_res %>% as.data.frame %>% rownames_to_column('Gene') %>% filter(padj<0.1) %>% left_join(t2g) %>% select(log2FoldChange, padj, Gene, name) %>% filter(log2FoldChange<0) %>% pull(Gene) -> de.genes
+
+fdr.threshold = 0.1
+genes = as.integer(wt_res$padj < fdr.threshold)
+names(genes) = rownames(wt_res)
+library(goseq)
+```
+In Yeastmine, the following Enrichments show up:
+
+
+
+
+Lets look at the activated genes:
+```{r}
+wt_res %>% as.data.frame %>% rownames_to_column('Gene') %>% filter(padj<0.1) %>% left_join(t2g) %>% select(log2FoldChange, padj, Gene, name) %>% filter(log2FoldChange>0) %>% pull(name)
+```
+In Yeastmine, the following Enrichments show up: None
+
+
+
