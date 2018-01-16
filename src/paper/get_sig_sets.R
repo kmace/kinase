@@ -3,6 +3,14 @@ library(magrittr)
 library(stringr)
 library(DESeq2)
 load('../../intermediate/images/normalized_data.RData')
+throw = read_csv('../../intermediate/Samples_to_thow_out.csv') %>% left_join(meta)
+dds_wt = dds_wt[,!(dds_wt$Sample_Name %in% throw$Sample_Name)]
+dds_wt = dds_wt[,!grepl('WT4', dds_wt$Strain_Code)]
+
+dds = dds[,!(dds$Sample_Name %in% throw$Sample_Name)]
+dds = dds[,!grepl('WT4', dds$Strain_Code)]
+
+
 
 wt_results = resultsNames(dds_wt)[-1] %>%
   map_dfr(~ lfcShrink(dds_wt, coef=.x) %>% # Use this when betaPrior was FALSE
@@ -15,10 +23,10 @@ lapply(levels(dds$Condition)[-1], function(cond){
   dds_cond = dds[,dds$Condition==cond]
   dds_cond$Strain <- droplevels(dds_cond$Strain)
   dds_cond@design = ~Strain
-  dds_cond = DESeq(dds_cond, parallel = F)
+  dds_cond = DESeq(dds_cond, parallel = T)
   res = lapply(resultsNames(dds_cond)[-1], function(x) {
     r = lfcShrink(dds_cond,
-                  coef = x) %>%
+                  coef = x, parallel = TRUE) %>%
     #r = results(dds_cond, name = x, independentFiltering = FALSE) %>%
       as.data.frame() %>%
       as_tibble(rownames = 'name') %>%
