@@ -160,6 +160,22 @@ per_condition_subset_results %>%
   stat_smooth_func(geom="text",method="lm",hjust=0,parse=TRUE) +
   geom_point() + geom_smooth(method = 'lm') + facet_wrap(~Kinase)
 
+for(cond in levels(meta$Condition)[-1]){
+  pdf(paste0(cond,'.pdf'))
+  p = per_condition_subset_results %>%
+    left_join(wt_results %>%
+                dplyr::select(condition, log2FoldChange, name, padj) %>%
+                dplyr::rename(wt_change = log2FoldChange, wtp = padj)) %>%
+    dplyr::filter(condition == cond & wtp<0.1) %>%
+    mutate(side = sign(wt_change)) %>%
+    ggplot(aes(x=wt_change, y=log2FoldChange, group=side)) +
+    stat_poly_eq(aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "\n")),
+                 formula = formula, parse = TRUE, coef.digits = 2, label.y.npc = "bottom") +
+    geom_point() + geom_smooth(method='lm') + facet_wrap(~Kinase)
+  print(p)
+  dev.off()
+}
+
 
 # by Strain
 kinase = 'CDC15'
@@ -182,7 +198,7 @@ p = per_condition_subset_results %>%
   left_join(wt_results %>%
               dplyr::select(condition, log2FoldChange, name, padj) %>%
               dplyr::rename(wt_change = log2FoldChange, wtp = padj)) %>%
-  dplyr::filter(Kinase == kinase & wtp<0.1 & condition == 'Salt')%>%
+  dplyr::filter(Kinase == kinase & wtp<0.1)%>%
   mutate(side = sign(wt_change)) %>%
   ggplot(aes(x=wt_change, y=log2FoldChange, group=side)) +
   stat_poly_eq(aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "\n")),

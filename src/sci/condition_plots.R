@@ -3,12 +3,12 @@ load('../../intermediate/images/normalized_data.RData')
 library(ComplexHeatmap)
 library(dendsort)
 library(circlize)
-
+cors = tibble()
 for(target_condition in levels(dds_wt$Condition)[-1]){
 pdf(paste0(target_condition, '.pdf'))
 #target_condition = str_replace(target_condition,' ','.')
 res = results(dds_wt, name = paste0("Condition_", target_condition, "_vs_YPD"))
-rst_sub = rlog(dds[,dds$Condition == target_condition])
+rst_sub = rlog(dds[,dds$Condition == target_condition & dds$Strain_Code != 'WT4'])
 rlog = assay(rst_sub)
 colnames(rlog) = colData(rst_sub)$Strain_Code
 sub_median = apply(rlog[,grepl('WT', colnames(rlog))],1,median)
@@ -33,5 +33,8 @@ draw(
           )
 )
 dev.off()
+
+cc = cov((rlog - sub_median)[sub_genes,],res[sub_genes,]$log2FoldChange)  %>% as_tibble(rownames = 'Strain_Code') %>% arrange(desc(abs(V1))) %>% dplyr::rename(cor = 'V1') %>% mutate(Condition =target_condition)
+cors %<>% rbind(cc)
 }
 

@@ -66,7 +66,7 @@ names(kinase_colors) = c(
 "YPK3")
 
 condition_colors = RColorBrewer::brewer.pal(10,"Set3")
-names(condition_colors) = sort(unique(sample_meta$Condition))
+names(condition_colors) = sort(unique(meta$Condition))
 
 condition_color_scale = scale_color_manual(name = 'Condition', values = condition_colors)
 kinase_color_scale = scale_color_manual(name = 'Kinase', values = kinase_colors)

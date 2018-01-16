@@ -12,6 +12,12 @@ dds = dds[,!grepl('WT4', dds$Strain_Code)]
 
 
 
+throw = read_csv('../../intermediate/Samples_to_thow_out.csv') %>% left_join(meta)
+
+dds_wt = dds_wt[,dds_wt$Strain_Code!='WT4']
+dds_wt = dds_wt[,!(dds_wt$Sample_Name %in% throw$Sample_Name)]
+
+
 wt_results = resultsNames(dds_wt)[-1] %>%
   map_dfr(~ lfcShrink(dds_wt, coef=.x) %>% # Use this when betaPrior was FALSE
             as.data.frame %>%
