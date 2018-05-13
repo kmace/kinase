@@ -13,6 +13,29 @@ library(ggthemes)
 ```
 
 # General Overview of data
+
+```{r}
+
+throw=read_csv('../../../intermediate/Samples_to_thow_out.csv') %>% left_join(meta)
+
+normalized_counts %>% as_tibble(rownames='name') %>% gather(key = Sample_Name, value = norm_counts, -name) %>% mutate(log2Counts = log2(norm_counts + 1)) %>% group_by(name) %>% filter(mean(log2Counts)>5) %>% ungroup() %>% left_join(meta %>% select(Sample_Name, Strain, Strain_Code, Condition)) %>% mutate(Sample_Info = paste0(Strain_Code,'_',Condition)) %>% filter(Strain_Code != 'WT4' & !(Sample_Name %in% throw$Sample_Name)) %>% group_by(name) %>% mutate(deltaCount = log2Counts - mean(log2Counts[Strain == 'WT' & Condition == 'YPD'])) -> l2FC
+
+l2FC %>% select(name,Sample_Info,deltaCount) %>% spread(key=Sample_Info,value = deltaCount) %>% remove_rownames() %>% column_to_rownames('name') %>% as.matrix() -> l2FC_matrix
+
+l2FC %>% ungroup() %>% select(Sample_Info, Strain, Condition) %>% unique() %>% arrange(Condition, Strain, Sample_Info) -> l2FC_meta
+
+l2FC_matrix = l2FC_matrix[,l2FC_meta$Sample_Info]
+
+hm = Heatmap(l2FC_matrix[rownames(l2FC_matrix) %in% hs_sensitive,],
+        col = colorRamp2(c(-4, -3, -2, -1, 0, 1, 2, 3, 4), coolwarm_hcl),
+        show_row_names = F,
+        show_column_names = F,
+        cluster_columns = F,
+        use_raster = T)
+draw(hm)
+```
+
+
 # General Overview of computational methods
 # Conditions and kinase relationships
 # kinase, kinase relationships PBS2 PKA [general], HOG1 PBS2 [condition specific]

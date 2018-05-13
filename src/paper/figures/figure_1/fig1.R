@@ -19,12 +19,14 @@ quantile_breaks <- function(xs, n = 10) {
 }
 
 make_hm = function(mat, ...){
+  split = cutree(hclust(dist(mat), method = 'ward.D2'),k=10)
     hm = Heatmap(mat,
                  col = colorRamp2(
                         quantile_breaks(mat, 11)[-c(1, 11)],
                         coolwarm_hcl),
-        show_row_names=F,
-        show_column_names=F,
+                 split = split,
+                 show_row_names=F,
+                 show_column_names=F,
         ...)
     return(hm)
 

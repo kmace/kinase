@@ -57,8 +57,10 @@ E_hat = E_hat[row_idx,]
 K = K[row_idx,]
 R = R[row_idx,]
 
-col_idx = dendsort(hclust(dist(t(E))))$order
-c_names_ordered = colnames(E)[col_idx]
+#col_idx = dendsort(hclust(dist(t(E))))$order
+#c_names_ordered = colnames(E)[col_idx]
+
+meta %>% filter(Sample_Name %in% colnames(E)) %>% arrange(Condition, Strain, Strain_Code) %>% pull(Sample_Name) -> c_names_ordered
 
 E = E[,c_names_ordered]
 E_hat = E_hat[,c_names_ordered]
@@ -74,7 +76,7 @@ colnames(K) = gsub(pattern='Strain', replacement='', colnames(K))
 sample_ha =  HeatmapAnnotation(sample_meta,
                                col = master_col,
                                show_annotation_name = FALSE,
-                               annotation_legend_param = list(Kinase = list(ncol = 1,
+                               annotation_legend_param = list(Kinase = list(ncol = 2,
                                                                             title_position = "topleft",
                                                                             by_row=FALSE))
                                                                         )
@@ -87,6 +89,7 @@ quantile_breaks <- function(xs, n = 10) {
   breaks[!duplicated(breaks)]
 }
 
+library(circlize)
 # Consistnat coloring on E
 col = colorRamp2(
   quantile_breaks(E, 11)[-c(1, 11)],
@@ -119,7 +122,7 @@ make_hm = function(mat, ...){
 
 
 
-e_hm = make_hm(E,
+e_hm = make_hm(E - rowMeans(E[,1:4]), #E,
     width=10, #unit(4, "in"),
     name = 'Expression',
     #column_title = expression(Delta~E[ij]),
@@ -172,10 +175,11 @@ k_hm = make_hm(K,
 # e_hm + c_hm + k_hm + r_hm
 # dev.off()
 
-png(filename='hm.png', width=24, height=8, units='in', res=300)
+png(filename='~/Desktop/hm.png', width=24, height=8, units='in', res=300)
 #e_hm + c_hm + k_hm + r_hm
 #e_hm + ehat_hm + r_hm
-e_hm + ehat_hm + c_hm + k_hm
+#e_hm + ehat_hm + c_hm + k_hm
+draw(e_hm + c_hm + k_hm)
 
 dev.off()
 
@@ -329,7 +333,7 @@ p = genes %>%
     ylab(expression('Density')) +
     scale_y_continuous(expand = c(0, 0))
 
-ggsave(p, filename = 'r2.pdf', height = 7, width = 8)
+ggsave(p, filename = '~/Desktop/r2.pdf', height = 7, width = 8)
 
 
 
@@ -342,15 +346,15 @@ inlay = fus1 %>%
     ggplot(aes(x=Expression,y=.fitted, color = Condition, label = Strain)) +
         geom_point(size=2) +
         condition_color_scale +
-        geom_text_repel(data = . %>% filter(abs(.std.resid) > 2), color='black') +
+        #geom_text_repel(data = . %>% filter(abs(.std.resid) > 2), color='black') +
         theme_Publication() +
         xlab('Actual Expression') +
         ylab('Predicted Expression') +
         #geom_text(aes(mean(Expression), max(.fitted), label=paste("Gene: ", n, " | R2: ", round(r2, 3))), color = 'black') +
-        coord_fixed(ratio=1) +
+        #coord_fixed(ratio=1) +
         geom_abline(slope=1, intercept=0, alpha=.2)
 
-ggsave(inlay, filename = 'inlay.pdf', height = 8, width = 8)
+ggsave(inlay, filename = '~/Desktop/inlay.pdf', height = 10, width = 8)
 
 # square_2 = ggdraw() +
 #   draw_plot(inlay, 0  , 0  , 1  , 1  ) +

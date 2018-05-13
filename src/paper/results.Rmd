@@ -7,68 +7,65 @@ opts_knit$set(warning=FALSE, message=FALSE, error=FALSE)
 
 ## Samples cluster into distinct kinases, and condition, and pathway specific Clusters.
 
-### Raw Data Heat-map
+### Figure 1.a Full data heatmap
 
-```{r quantile_heatmap}
+
+```{r}
+library(tidyverse)
+library(ComplexHeatmap)
+library(circlize)
+library(magrittr)
 
 quantile_breaks <- function(xs, n = 10) {
   breaks <- quantile(xs, probs = seq(0, 1, length.out = n), na.rm=T)
   breaks[!duplicated(breaks)]
 }
+meta$Kinase = meta$Strain
 
-quantile_heatmap = function(mat, col_data){
+throw = read_csv('../../intermediate/Samples_to_thow_out.csv') %>% left_join(meta)
 
-    mat_breaks <- quantile_breaks(mat, n = 11)
 
-    coolwarm_hcl <- colorspace::diverge_hcl(11,
-                                            h = c(250, 10),
-                                            c = 100,
-                                            l = c(37, 88),
-                                            power = c(0.7, 1.7))
 
-    library(pheatmap)
-    # from http://slowkow.com/notes/heatmap-tutorial/
+genes %>% select(name, data) %>% unnest() %>% group_by(name) %>% filter(!(Sample_Name %in% throw$Sample_Name)) %>% group_by(name) %>% mutate(exp = Expression - mean(Expression[Strain == 'WT' & Condition == 'YPD'])) %>% select(name, Sample_Name, exp) %>% spread(key = Sample_Name, value = exp) %>% remove_rownames() %>% column_to_rownames('name') %>% as.matrix() -> exp
 
-    pheatmap(mat,
-             color = coolwarm_hcl,
-             scale = 'none',
-             breaks = mat_breaks,
-             border_color = NA,
-             show_rownames = FALSE,
-             show_colnames = TRUE,
-             annotation_col = col_data)
-}
+sample_ha =  HeatmapAnnotation(meta %>% select(Kinase, Condition),
+                               col = master_col,
+                               show_annotation_name = TRUE)#,
+                               # annotation_legend_param = list(Kinase = list(ncol = 2,
+                               #                                              title_position = "topleft",
+                               #                                              by_row=FALSE))
+                               #                                          )
 
-```
+meta %<>% filter(Sample_Name %in% colnames(exp)) %>% arrange(Condition, Strain, Strain_Code)
+exp = exp[,meta$Sample_Name]
 
-```{r fig.height=12, fig.width=10, warning=FALSE}
-genes %>%
-  dplyr::select(name, data) %>%
-  unnest() %>%
-  dplyr::select(Norm_Differential_Expression, Sample_Name, name) %>%
-  spread(key = Sample_Name, value = Norm_Differential_Expression, fill = NA) %>%
-  remove_rownames() %>%
-  column_to_rownames('name') %>%
-  as.matrix() -> gene_expression_matrix
-as_tibble(meta) %>%
-     dplyr::slice(match(colnames(gene_expression_matrix), Sample_Name)) %>%
-     dplyr::select(Condition, Strain) -> meta_sub
+e_hm = Heatmap(exp,
+               cluster_columns = F,
+               col = colorRamp2(
+                        quantile_breaks(exp, 11)[-c(1, 11)],
+                        coolwarm_hcl),
+               show_row_names=F,
+               show_column_names=F,
+               name = '',
+               #top_annotation = sample_ha,
+               heatmap_legend_param = list(legend_direction = "horizontal", 
+                                           legend_width = unit(6, "cm")),
+               use_raster = TRUE)
 
-num_genes_to_show = 5000
 
-genes %>%
-  filter(Gene_mean > 6) %>%
-  top_n(num_genes_to_show, Gene_sd) %>%
-  pull(name) -> genes_to_show
 
-mat = gene_expression_matrix[genes_to_show,]
+#pdf('~/Desktop/heatmap.pdf', width = 16, height = 9)
+#draw(e_hm, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+#dev.off()
 
-meta_sub = meta_sub %>% as.data.frame()
-rownames(meta_sub) = colnames(mat)
+png('img/heatmap.png', res = 300, width = 16, height = 9)
+draw(e_hm, heatmap_legend_side = "bottom")
+dev.off()
 
-quantile_heatmap(mat, meta_sub)
+
 
 ```
+
 
 
 Generating a gene expression heat-map across all samples, we can see that there is definite structure.
@@ -86,19 +83,23 @@ Although this representation can not be used to infer properties of the global s
 
 ```{r}
 library(ggrepel)
-select = dplyr::select
-tsne_plot = function(df){
-ggplot(df,
+library(ggthemes)
+
+ggplot(sample_tsne,
        aes(x=TSNE1,
            y=TSNE2,
            color = Condition,
            label = Strain_Code)) +
-  geom_point(size=4) +
-  geom_text_repel(size = 2,
+  geom_point(size=4, alpha=.6) +
+  geom_text_repel(size = 1.5,
                   color = 'black',
                   point.padding = NA,
-                  box.padding = unit(0.01, "lines"))
-}
+                  box.padding = unit(0.01, "lines")) +
+  theme_Publication() +
+  theme(legend.position="none") +
+  condition_color_scale
+ggsave('img/tsne.pdf', width=5.5, height=5.5)
+
 ```
 
 #### Wild-type samples
@@ -107,7 +108,25 @@ Firstly, we will look at the biological replicates in the collected data, 3 or 4
 
 
 ```{r, message = FALSE, fig.width=12, fig.height=10}
-sample_tsne %>% filter(grepl('WT', Strain_Code)) %>% tsne_plot()# + ggtitle('just WT')
+library(ggthemes)
+
+sample_tsne %>% 
+  filter(grepl('WT', Strain_Code)) %>%
+ggplot(
+       aes(x=TSNE1,
+           y=TSNE2,
+           color = Condition,
+           label = Strain_Code)) +
+  geom_point(size=4, alpha=.6) +
+  geom_text_repel(size = 1.5,
+                  color = 'black',
+                  point.padding = NA,
+                  box.padding = unit(0.01, "lines")) +
+  theme_Publication() +
+  theme(legend.position="none") +
+  condition_color_scale
+ggsave('img/tsne_wt.pdf', width=5.5, height=5.5)
+
 ```
 We see that the dimensionality reduction maintains information necessary to group WT cells with each other, and separate out conditions.
 

@@ -1,3 +1,5 @@
+rownames(meta) = meta$Sample_Name
+
 genes %>%
     select(name, data) %>%
     unnest() %>%

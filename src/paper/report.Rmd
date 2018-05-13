@@ -29,6 +29,9 @@ library(stringr)
 
 load('../../intermediate/images/paper_data.RData')
 source('pipeline/colors.R')
+per_condition_subset_results = read_csv('../../intermediate/per_condition_subset_results.csv')
+wt_results = read_csv('../../intermediate/wt_results.csv')
+
 ```
 
 ```{r, child='abstract.Rmd'}
