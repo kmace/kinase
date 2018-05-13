@@ -1,0 +1,75 @@
+---
+title: "HOG1"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+select = dplyr::select
+library(magrittr)
+library(edgeR)
+#library(DEFormats)
+meta = read_csv('../../intermediate/meta_clean.csv') %>%
+  mutate(Strain = relevel(factor(Strain), ref = 'WT'),
+         Condition = relevel(factor(Condition), ref = 'YPD'))
+t2g = read_csv('../../intermediate/t2g.csv')
+
+counts = readDGE(meta$star_path, columns = c(1,3), labels = meta$Experiment)[-c(1:3),]
+```
+
+Lets test for differnetial expression for hog1 and account for all conditions:
+
+```{r}
+library(DESeq2)
+dds = DESeqDataSetFromMatrix(counts, meta, ~ Condition + Strain)
+dds %<>% DESeq()
+vlog = assays(vst(dds))
+```
+
+```{r}
+res = results(dds, name = "Strain_HOG1_vs_WT")
+```
+
+```{r}
+fdr.threshold = 0.1
+
+
+
+get_go_terms_from_list = function(query_list, background_list) {
+    library(goseq)
+    library(org.Sc.sgd.db)
+    genes = numeric(length(background_list))
+    names(genes) = background_list
+    genes[query_list] = 1
+    pwf = nullp(genes,"sacCer2","ensGene")
+    GO.wall=goseq(pwf,gene2cat=as.list(org.Sc.sgdGO2ALLORFS))
+    return(GO.wall)
+}
+
+res %>% 
+  as.data.frame %>% 
+  rownames_to_column('Gene') %>% 
+  filter(padj<fdr.threshold) %>% 
+  left_join(t2g) %>% 
+  select(log2FoldChange, padj, Gene, name) %>% 
+  filter(log2FoldChange<0) %>% 
+  pull(Gene) %>% 
+  get_go_terms_from_list(rownames(res)) %>% 
+  as_tibble() %>%
+  filter(over_represented_pvalue < 0.05 | under_represented_pvalue < 0.05) %>%
+  arrange(desc(numDEInCat/numInCat)) %>% select(term, starts_with('num'), ends_with('pvalue'))
+```
+
+So many go terms, but lets check 
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
