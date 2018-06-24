@@ -1,4 +1,6 @@
 library(tidyverse)
+
+# DESeq Data
 per_condition_subset_results = read_csv('../../intermediate/per_condition_subset_results.csv')
 wt_results = read_csv('../../intermediate/wt_results.csv')
 
@@ -30,6 +32,8 @@ out
 #spread(key=Kinase, value = pvalue) %>%
 #as.data.frame() %>% remove_rownames() %>%
 #column_to_rownames('name') %>% is.na() %>% `!` -> mat
+
+source('figures/custom_smooth_function.R')
 
 # Smooth by Condition
 cond = 'Tunicamycin'
@@ -146,9 +150,10 @@ p = per_condition_subset_results %>%
               dplyr::select(condition, log2FoldChange, name, padj) %>%
               dplyr::rename(wt_change = log2FoldChange, wtp = padj)) %>%
   dplyr::filter(wtp<0.1 & condition == 'Tunicamycin' & Kinase %in% c('FUS3', 'IRE1', 'TPK123')) %>%
-  ggplot(aes(x = wt_change, y = log2FoldChange)) + geom_point(size=.51) + geom_smooth(method='lm') + facet_wrap(~Kinase) + theme_bw() + ylim(c(-5,5)) + theme_Publication()
+  ggplot(aes(x = wt_change, y = log2FoldChange)) + geom_point(size=.51) + geom_smooth(method='lm') + facet_wrap(~Kinase) + theme_bw() + ylim(c(-5,5))
 
 ggsave(p,width = 15,height = 5, filename = '~/Desktop/slopes.pdf')
+
 library(modelr)
 per_condition_subset_results %>%
   #per_condition_subset_results %>% filter(name %in% (modules %>% filter(module == 'HOT1') %>% pull(name))) %>%
@@ -202,36 +207,6 @@ base = ggplot(fits, aes(y=Kinase, x=condition)) + #theme_bw() +
         )
 
 
-pdf('~/Desktop/hmaps.pdf', width = 7, height = 4.5)
-
-# Full color slope
-base +
-  geom_tile(aes(fill = slope_norm)) + scale_fill_gradient2(na.value = 'black')
-# abs slope
-base +
-  geom_tile(aes(fill = abs(slope_norm))) +
-  scale_fill_gradient2()
-
-# R2
-library(viridis)
-base +
-  geom_tile(aes(fill = r2)) + scale_fill_viridis()
-base +
-  geom_tile(aes(fill = r2)) + scale_fill_gradient2()
-
-# var
-base +
-  geom_tile(aes(fill = var_norm)) +
-  scale_fill_gradient2()
-dev.off()
-
-library(ggrepel)
-pdf('~/Desktop/slope_vs_r2.pdf')
-for(c in unique(fits$condition)){
-  p = fits %>% filter(condition == c) %>% arrange(slope) %>% ggplot(aes(x=r2, y = slope, label=Kinase)) + geom_label_repel() + ggtitle(c)
-  print(p)
-}
-dev.off()
 
 
 # Fig 3 heatmaps

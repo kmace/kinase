@@ -79,12 +79,13 @@ strain_fill_scale = scale_fill_manual(name = 'Strain', values = kinase_colors)
 master_col = list(Condition = condition_colors,
                   Kinase = kinase_colors)
 
-coolwarm_hcl <- colorspace::diverge_hcl(11,
-                                        h = c(250, 10),
-                                        c = 100,
-                                        l = c(37, 88),
-                                        power = c(0.7, 1.7))[-c(1, 11)]
+#coolwarm_hcl <- colorspace::diverge_hcl(11,
+#                                        h = c(250, 10),
+#                                        c = 100,
+#                                        l = c(37, 88),
+#                                        power = c(0.7, 1.7))[-c(1, 11)]
 
+divergent_colors = RColorBrewer::brewer.pal(n = 11, 'BrBG')
 
 
 theme_Publication <- function(base_size=14, base_family='') {

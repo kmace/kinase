@@ -13,10 +13,12 @@ select = dplyr::select
 library(magrittr)
 library(edgeR)
 #library(DEFormats)
-meta = read_csv('../../intermediate/meta_clean.csv') %>%
+meta = read_csv('../../../intermediate/meta_clean.csv') %>%
   mutate(Strain = relevel(factor(Strain), ref = 'WT'),
          Condition = relevel(factor(Condition), ref = 'YPD'))
-t2g = read_csv('../../intermediate/t2g.csv')
+t2g = read_csv('../../../intermediate/t2g.csv')
+
+meta$star_path = file.path('..', meta$star_path)
 
 meta_wt = meta %>% filter(Strain == 'WT')
 counts_wt = readDGE(meta_wt$star_path, columns = c(1,3), labels = meta_wt$Experiment)[-c(1:3),]

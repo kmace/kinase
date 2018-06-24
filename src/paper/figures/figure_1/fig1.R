@@ -1,68 +1,73 @@
 library(tidyverse)
 library(ComplexHeatmap)
 library(circlize)
+library(ggrepel)
+library(ggthemes)
+
+# Objects Required:
+# sample_meta
+# master_col
+# exp_matrix
+# sample_tsne
+# condition_color_scale
+
+
 load('../../../../intermediate/images/paper_data.RData')
 source('../make_obj.R')
 source('../colors.R')
 
 
+#Set output location:
+output_path = '../../../../output/Images/figure_1'
+dir.create(output_path)
+# Heatmap
 
+#quantile_breaks <- function(xs, n = 10) {
+#  breaks <- quantile(xs, probs = seq(0, 1, length.out = n), na.rm=T)
+#  breaks[!duplicated(breaks)]
+#}
 
-
-
-
-
-
-quantile_breaks <- function(xs, n = 10) {
-  breaks <- quantile(xs, probs = seq(0, 1, length.out = n), na.rm=T)
-  breaks[!duplicated(breaks)]
-}
-
-make_hm = function(mat, ...){
-  split = cutree(hclust(dist(mat), method = 'ward.D2'),k=10)
-    hm = Heatmap(mat,
-                 col = colorRamp2(
-                        quantile_breaks(mat, 11)[-c(1, 11)],
-                        coolwarm_hcl),
-                 split = split,
-                 show_row_names=F,
-                 show_column_names=F,
-        ...)
-    return(hm)
-
-}
-
-sample_ha =  HeatmapAnnotation(sample_meta,
+# Column Annotation
+column_annotation =  HeatmapAnnotation(sample_meta,
                                col = master_col,
                                show_annotation_name = TRUE,
                                annotation_legend_param = list(Kinase = list(ncol = 2,
                                                                             title_position = "topleft",
                                                                             by_row=FALSE))
                                                                         )
+# Cluster Rows
+split = cutree(hclust(dist(exp_matrix),
+                      method = 'ward.D2'),
+               k=10)
+
+# Heatmap
+hmap = Heatmap(exp_matrix,
+               name = '',
+               cluster_columns = F,
+               top_annotation = column_annotation,
+               heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
+               use_raster = FALSE,
+               #col = colorRamp2(quantile_breaks(exp_matrix, 11), divergent_colors),
+               col = colorRamp2(-5:5, divergent_colors),
+               split = split,
+               show_row_names=F,
+               show_column_names=F)
 
 
-e_hm = make_hm(exp_matrix,
-    name = '',
-    cluster_columns = F,
-    top_annotation = sample_ha,
-    heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
-    use_raster = FALSE)
 
 
 
-pdf('~/Desktop/heatmap.pdf', width = 16, height = 9)
-draw(e_hm, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+pdf(file.path(output_path, 'heatmap.pdf'), width = 16, height = 9)
+draw(hmap, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
 dev.off()
 
-png('~/Desktop/heatmap.png', res = 300, width = 16, height = 9)
-draw(e_hm, heatmap_legend_side = "bottom")
-dev.off()
+#png(file.path(output_path, 'heatmap.png'), res = 300, width = 16, height = 9)
+#draw(hmap, heatmap_legend_side = "bottom")
+#dev.off()
 
 
-library(ggrepel)
-library(ggthemes)
 
-pdf('tsne.pdf', width=5.5, height=5.5)
+pdf(file.path(output_path, 'tsne.pdf'), width=5.5, height=5.5)
 ggplot(sample_tsne,
        aes(x=TSNE1,
            y=TSNE2,
