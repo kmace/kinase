@@ -8,7 +8,21 @@ load('../../../../intermediate/images/paper_data.RData')
 source('../make_obj.R')
 source('../colors.R')
 
-weights = genes %>%
+genes %>%
+  select(name, data) %>%
+  unnest() %>%
+  group_by(name) %>%
+  mutate(DE = (Expression - mean(Expression[Strain == 'WT' & Condition == 'YPD']))/sd(Expression)) %>%
+  select(name, Sample_Name, DE, Strain, Condition) -> dat
+
+dat %<>% group_by(name) %>% nest() %>% #dplyr::filter(Gene_mean > 5) %>%
+  mutate(model = map(data, ~lm(DE ~ Strain + Condition, data = .))) %>%
+  mutate_at(.vars = vars(model),
+            .funs = funs(performance = map(.,glance),
+                         weights = map(.,tidy),
+                         data_augment = map(.,augment)))
+
+weights = dat %>%
     select(name, weights) %>%
     unnest() %>%
     select(name, term, estimate)
@@ -21,16 +35,18 @@ C = weights %>%
     filter(grepl('Condition',term)) %>%
     spread(key = term, value = estimate)
 
-M = genes %>%
+#M = genes %>%
+M = dat %>%
     select(name, data, data_augment) %>%
     unnest()
 
 E = M %>%
     select(name,
     Sample_Name,
-    Differential_Expression) %>%
+    #Differential_Expression) %>%
+    DE) %>%
     spread(key = Sample_Name,
-    value = Differential_Expression)
+    value = DE)
 
 R = M %>%
     select(name,
@@ -48,14 +64,14 @@ E = E %>% remove_rownames() %>% column_to_rownames('name') %>% as.matrix()
 
 E_hat = E - R
 
-
+library(dendsort)
 row_idx = dendsort(hclust(dist(E)))$order
 
 C = C[row_idx,]
 E = E[row_idx,]
-E_hat = E_hat[row_idx,]
+#E_hat = E_hat[row_idx,]
 K = K[row_idx,]
-R = R[row_idx,]
+#R = R[row_idx,]
 
 #col_idx = dendsort(hclust(dist(t(E))))$order
 #c_names_ordered = colnames(E)[col_idx]
@@ -84,45 +100,40 @@ condition_ha = HeatmapAnnotation(data.frame(Condition = colnames(C)), col = mast
 kinase_ha = HeatmapAnnotation(data.frame(Kinase = colnames(K)), col = master_col)
 
 
-quantile_breaks <- function(xs, n = 10) {
-  breaks <- quantile(xs, probs = seq(0, 1, length.out = n), na.rm=T)
-  breaks[!duplicated(breaks)]
-}
+###
+#Set output location:
+output_path = '../../../../output/Images/figure_4'
+dir.create(output_path)
+# Heatmap
 
-library(circlize)
-# Consistnat coloring on E
-col = colorRamp2(
-  quantile_breaks(E, 11)[-c(1, 11)],
-  coolwarm_hcl
-)
+# # Figure 1 Heatmap
+# hmap = Heatmap(exp_matrix,
+#                name = '',
+#                cluster_columns = F,
+#                top_annotation = column_annotation,
+#                heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
+#                use_raster = FALSE,
+#                #col = colorRamp2(quantile_breaks(exp_matrix, 11), divergent_colors),
+#                col = colorRamp2(-5:5, divergent_colors),
+#                split = split,
+#                show_row_names=F,
+#                show_column_names=F)
 
-# Consistnat coloring on E
-test = quantile_breaks(abs(s), 5)
-col = colorRamp2(
-  c(-rev(test), 0, test)[-c(1, 11)],
-  coolwarm_hcl
-)
-
-
-#col = colorRamp2(c(-3, 0, 3), c("green", "white", "red"))
 
 make_hm = function(mat, ...){
-    hm = Heatmap(mat,
-        col = col,
-        cluster_rows=F,
-        cluster_columns=F,
-        show_row_names=F,
-        show_column_names=F,
-        use_raster = TRUE,
-        raster_quality = 5,
-        ...)
-    return(hm)
-
+  hm = Heatmap(mat,
+               col = colorRamp2(-5:5, divergent_colors),
+               cluster_rows=F,
+               cluster_columns=F,
+               show_row_names=F,
+               show_column_names=F,
+               use_raster = TRUE,
+               raster_quality = 5,
+               ...)
+  return(hm)
 }
 
-
-
-e_hm = make_hm(E - rowMeans(E[,1:4]), #E,
+e_hm = make_hm(E, #- rowMeans(E[,1:4]), #E,
     width=10, #unit(4, "in"),
     name = 'Expression',
     #column_title = expression(Delta~E[ij]),
@@ -130,7 +141,6 @@ e_hm = make_hm(E - rowMeans(E[,1:4]), #E,
     top_annotation = sample_ha)
 
 Heatmap(E,
-        col = col,
         cluster_rows=T,
         cluster_columns=F,
         show_row_names=F,
@@ -143,17 +153,11 @@ Heatmap(E,
         top_annotation = sample_ha)
 
 
-ehat_hm = make_hm(E_hat,
-    width=10, #unit(4, "in"),
-    name = 'Expression',
-    #column_title = expression(Delta~E[ij]),
-    top_annotation = sample_ha)
-
-r_hm = make_hm(R,
-    width = 10, #unit(4, "in"),
-    name = 'Residual',
-    column_title = expression(R[ij]),
-    top_annotation = sample_ha)
+# ehat_hm = make_hm(E_hat,
+#     width=10, #unit(4, "in"),
+#     name = 'Expression',
+#     #column_title = expression(Delta~E[ij]),
+#     top_annotation = sample_ha)
 
 c_hm = make_hm(C,
     width = 4, #unit(4, "in"),
@@ -167,21 +171,19 @@ k_hm = make_hm(K,
     #column_title = expression(K[j]),
     top_annotation = kinase_ha)
 
-# png('heatmap.png', res = 500)
-# e_hm + c_hm + k_hm + r_hm
-# dev.off()
 
-# png(filename='hm.png', width=24, height=5, units='in', res=300)
-# e_hm + c_hm + k_hm + r_hm
-# dev.off()
-
-png(filename='~/Desktop/hm.png', width=24, height=8, units='in', res=300)
+png(filename=file.path(output_path, 'Figure_4a_heatmap_deconstruction.png'), width=24, height=8, units='in', res=300)
 #e_hm + c_hm + k_hm + r_hm
 #e_hm + ehat_hm + r_hm
 #e_hm + ehat_hm + c_hm + k_hm
 draw(e_hm + c_hm + k_hm)
 
 dev.off()
+
+pdf(file.path(output_path, 'Figure_4a_heatmap_deconstruction.pdf'), width = 16, height = 9)
+draw(e_hm + c_hm + k_hm, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
 
 # png(filename='hm.png')
 # e_hm + c_hm + k_hm + r_hm
@@ -364,3 +366,34 @@ ggsave(inlay, filename = '~/Desktop/inlay.pdf', height = 10, width = 8)
 #                   c(.5, 0.5), size = 15)
 #
 # ggsave(square_2, )
+pdf(file.path(output_path, 'Figure_4c_scatter_pred_vs_acutal.pdf'), width = 6, height = 6)
+genes %>%
+  filter(name == 'HSP12') %>%
+  select(data, data_augment) %>%
+  unnest() %>%
+  ggplot(aes(x = Expression, y = .fitted)) +
+  geom_point() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlim(4.5,22) +
+  ylim(4.5,22) +
+  xlab('Measured Expression') +
+  ylab('Predicted Expression') +
+  geom_abline(slope=1, alpha = .2)
+dev.off()
+
+pdf(file.path(output_path, 'Figure_4e_scatter_pred_vs_residual.pdf'), width = 6, height = 6)
+genes %>%
+  select(data, data_augment) %>%
+  unnest() %>%
+  #sample_n(1000) %>%
+  ggplot(aes(x = .fitted, y = .std.resid)) +
+  geom_density_2d() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  xlab('Predicted Expression') +
+  ylab('Standardized Residual') +
+  geom_abline(slope = 0, intercept = 2.5, alpha = .2) +
+  geom_abline(slope = 0, intercept = -2.5, alpha = .2) +
+  ylim(-5,5)
+dev.off()

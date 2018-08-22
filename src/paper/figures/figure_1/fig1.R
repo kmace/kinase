@@ -57,7 +57,11 @@ hmap = Heatmap(exp_matrix,
 
 
 
-pdf(file.path(output_path, 'heatmap.pdf'), width = 16, height = 9)
+pdf(file.path(output_path, 'Figure_1b_heatmap.pdf'), width = 16, height = 9)
+draw(hmap, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+pdf(file.path(output_path, 'Figure_1b_skinny_heatmap.pdf'), width = 7, height = 9)
 draw(hmap, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
 dev.off()
 

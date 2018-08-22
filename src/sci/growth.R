@@ -1,5 +1,8 @@
-meta = read.csv('../../input/meta/384_Well_meta.csv',header=T)
-od = read.table('../../input/growth/from_saturation.txt', header=T)
+library(tidyverse)
+library(RColorBrewer)
+
+meta = read.csv('../../input/meta/Growth_Rate_Experimental_Designs/Whitehead_ALL_in_ALL_Conditions_from_Saturation/384_Well_meta.csv',header=T)
+od = read.table('../../input/growth/Whitehead_ALL_in_ALL_Conditions_from_Saturation/from_saturation.txt', header=T)
 od = od[,-c(1,2)]
 rate = 4*apply(log2(apply(od,2,smooth)),2,diff)
 meta = meta %>% mutate(well_name = paste(Row, Column,sep=''))
@@ -53,6 +56,46 @@ dev.off()
 ave_top_speed = apply(rate,2,function(x) mean(sort(x,decreasing=TRUE)[1:3]))
 dat = cbind(meta, ave_top_speed[match(meta$well_name, names(ave_top_speed))])
 colnames(dat)[dim(dat)[2]] = 'top_speed'
+
+# Here I step in to make a supp figure for the paper:
+
+dat = dat %>% group_by(Strain) %>% mutate(top_speed_n = top_speed/top_speed[Condition == 'Drug']) %>% ungroup()
+ggplot(dat, aes(x = Strain, y = top_speed_n)) + geom_bar(stat="identity") + facet_wrap(~Condition, scales = 'free_y') + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4, size = 4))
+ggsave('~/Desktop/growth_like_slope.pdf')
+write_csv(dat, '~/Desktop/growth_rates.csv')
+
+per_condition_subset_results = read_csv('../../../../intermediate/per_condition_subset_results.csv')
+wt_results = read_csv('../../../../intermediate/wt_results.csv')
+library(modelr)
+per_condition_subset_results %>%
+#per_condition_subset_results %>% filter(name %in% (modules %>% filter(module == 'HOT1') %>% pull(name))) %>%
+left_join(wt_results %>%
+dplyr::select(condition, log2FoldChange, name, padj) %>%
+dplyr::rename(wt_change = log2FoldChange, wtp = padj)) %>%
+dplyr::filter(wtp<0.1) %>% group_by(condition, Kinase) %>% nest() %>%
+mutate(mod = map(data,~lm(log2FoldChange ~ wt_change, data = .)),
+coefs = map(mod, ~coef(.)),
+slope = map_dbl(coefs, 'wt_change'),
+r2 = map2_dbl(mod, data, ~rsquare(.x,.y)),
+var = map_dbl(data, function(x) x %>% pull(log2FoldChange) %>% var)) -> fits
+
+growth = read_csv('~/Desktop/growth_rates.csv')
+
+growth %>%
+  select(Kinase = Strain,
+         condition = Condition,
+         growth = top_speed_n) %>%
+  left_join(fits %>%
+              select(Kinase, condition, slope)) %>%
+  na.omit() %>%
+  filter(condition == 'Salt') %>%
+  ggplot(aes(x = slope, y = growth, label = Kinase)) +
+  geom_point() +
+  geom_smooth(method = 'lm') +
+  ggrepel::geom_text_repel()
+ggsave('~/Desktop/weak_slope_to_growth_corrolation.pdf')
+
+
 
 normalize_it = function(x) x/max(x)
 

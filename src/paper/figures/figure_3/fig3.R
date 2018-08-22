@@ -34,7 +34,7 @@ My_Heatmap = function(x,
                       cluster_rows = F,
                       #col = mcol,
                       #colorRamp2(c(-2, 0, 2), c("blue", "white", "red")),
-                      col = colorRamp2(seq(-2,2,length.out = length(coolwarm_hcl)), coolwarm_hcl),
+                      col = colorRamp2(-5:5, divergent_colors),
                       ...){
   Heatmap(x,
           show_row_names = F,
@@ -73,7 +73,11 @@ wt = wt[rownames(x), ]
 tm_split = cutree(hclust(dist(cbind(x,y,z,wt)), method = 'ward.D2'),k=7)
 tm_split %>% {write.csv(data.frame(name = names(.), cluster = .) %>% left_join(t2g), 'tm_clusters.csv')}
 
-png('Tunic.png', width = 11000, height = 4000, res = 600)
+#Set output location:
+output_path = '../../../../output/Images/figure_3'
+dir.create(output_path)
+
+png(file.path(output_path, 'Figure_3a_tunicamycin_heatmap.png'), width = 11000, height = 4000, res = 600)
 My_Heatmap(x,
            name = 'Tunicamycin',
            split = tm_split) +
@@ -202,3 +206,191 @@ Heatmap(out[[x]], col = colorRamp2(seq(-2,2,length.out = length(coolwarm_hcl)), 
 dev.off()
 
 
+
+genes %>%
+select(name, data) %>%
+unnest() %>%
+group_by(name, Condition) %>%
+mutate(DE = (Expression - mean(Expression[Strain == 'WT']))) %>%
+ungroup() %>%
+group_by(name) %>%
+mutate(DE = DE/sd(DE)) %>%
+select(name, Sample_Name, DE) %>%
+spread(key = Sample_Name, value=DE) %>%
+remove_rownames() %>%
+column_to_rownames('name') %>%
+as.matrix() -> exp_matrix2
+
+exp_matrix2 = exp_matrix2[,sample_order]
+
+tm_genes = tm_genes[tm_genes %in% rownames(exp_matrix2)]
+x = exp_matrix2[tm_genes,((sm %>% filter(Condition == 'Tunicamycin') %>% pull(rowname)))]; colnames(x) = data.frame(rowname = colnames(x)) %>% left_join(sm) %>% pull(Kinase)
+y = exp_matrix2[tm_genes,((sm %>% filter(Kinase == 'IRE1') %>% pull(rowname)))]; colnames(y) = data.frame(rowname = colnames(y)) %>% left_join(sm) %>% pull(Condition)
+z = exp_matrix2[tm_genes,((sm %>% filter(Kinase == 'CDC15') %>% pull(rowname)))]; colnames(z) = data.frame(rowname = colnames(z)) %>% left_join(sm) %>% pull(Condition)
+
+tm_split = cutree(hclust(dist(cbind(x,y,z)), method = 'ward.D2'),k=7)
+as.data.frame(tm_split) %>% rownames_to_column('Gene') %>% arrange(tm_split) %>% write_csv(file.path(output_path, 'Figure_3a_tunicamycin_genes.csv'))
+
+png(file.path(output_path, 'Figure_3a_tunicamycin_heatmap.png'), width = 11000, height = 4000, res = 600)
+My_Heatmap(x,
+name = 'Tunicamycin',
+split = tm_split) +
+My_Heatmap(y,
+name = 'IRE1') +
+My_Heatmap(z,
+name = 'CDC15')
+dev.off()
+
+salt_genes = salt_genes[salt_genes %in% rownames(exp_matrix2)]
+x = exp_matrix2[salt_genes,((sm %>% filter(Condition == 'Salt') %>% pull(rowname)))]; colnames(x) = data.frame(rowname = colnames(x)) %>% left_join(sm) %>% pull(Kinase)
+y = exp_matrix2[salt_genes,((sm %>% filter(Kinase == 'HOG1') %>% pull(rowname)))]; colnames(y) = data.frame(rowname = colnames(y)) %>% left_join(sm) %>% pull(Condition)
+z = exp_matrix2[salt_genes,((sm %>% filter(Kinase == 'PBS2') %>% pull(rowname)))]; colnames(z) = data.frame(rowname = colnames(z)) %>% left_join(sm) %>% pull(Condition)
+
+na_split = cutree(hclust(dist(cbind(x,y,z)), method = 'ward.D2'),k=7)
+as.data.frame(na_split) %>% rownames_to_column('Gene') %>% arrange(na_split) %>% write_csv(file.path(output_path, 'Figure_3b_salt_genes.csv'))
+
+png(file.path(output_path, 'Figure_3b_salt_heatmap.png'), width = 11000, height = 4000, res = 600)
+My_Heatmap(x,
+           name = 'Salt',
+           split = na_split) +
+  My_Heatmap(y,
+             name = 'HOG1') +
+  My_Heatmap(z,
+             name = 'PBS2')
+dev.off()
+
+
+
+
+
+
+hmap2 = Heatmap(exp_matrix2,
+               name = '',
+               cluster_columns = F,
+               top_annotation = column_annotation,
+               heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
+               use_raster = FALSE,
+               #col = colorRamp2(quantile_breaks(exp_matrix, 11), divergent_colors),
+               col = colorRamp2(-5:5, divergent_colors),
+               #split = split,
+               show_row_names=F,
+               show_column_names=F)
+
+pdf(file.path(output_path, 'Figure_3c_contrast_heatmap.pdf'), width = 16, height = 9)
+draw(hmap2, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+pdf(file.path(output_path, 'Figure_3c_skinny_contrast_heatmap.pdf'), width = 7, height = 9)
+draw(hmap2, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+genes %>%
+  select(name, data) %>%
+  unnest() %>%
+  group_by(name, Strain) %>%
+  mutate(DE = (Expression - mean(Expression))) %>%
+  ungroup() %>%
+  group_by(name) %>%
+  mutate(DE = DE/sd(DE)) %>%
+  select(name, Sample_Name, DE) %>%
+  spread(key = Sample_Name, value=DE) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> exp_matrix3
+
+exp_matrix3 = exp_matrix3[,sample_order]
+
+hmap3 = Heatmap(exp_matrix3,
+                name = '',
+                cluster_columns = F,
+                top_annotation = column_annotation,
+                heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
+                use_raster = FALSE,
+                #col = colorRamp2(quantile_breaks(exp_matrix, 11), divergent_colors),
+                col = colorRamp2(-5:5, divergent_colors),
+                #split = split,
+                show_row_names=F,
+                show_column_names=F)
+
+
+
+pdf(file.path(output_path, 'Figure_3d_contrast_heatmap.pdf'), width = 16, height = 9)
+draw(hmap3, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+pdf(file.path(output_path, 'Figure_3d_skinny_contrast_heatmap.pdf'), width = 7, height = 9)
+draw(hmap3, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+
+genes %>%
+  select(name, data) %>%
+  unnest() %>%
+  group_by(name, Strain) %>%
+  mutate(DE = (Expression - mean(Expression))) %>%
+  ungroup() %>%
+  group_by(name, Condition) %>%
+  mutate(DE = (DE - mean(DE[Strain == 'WT']))) %>%
+  ungroup() %>%
+  group_by(name) %>%
+  mutate(DE = DE/sd(DE)) %>%
+  select(name, Sample_Name, DE) %>%
+  spread(key = Sample_Name, value=DE) %>%
+  remove_rownames() %>%
+  column_to_rownames('name') %>%
+  as.matrix() -> exp_matrix4
+
+exp_matrix4 = exp_matrix4[,sample_order]
+
+hmap4 = Heatmap(exp_matrix4,
+                name = '',
+                cluster_columns = F,
+                top_annotation = column_annotation,
+                heatmap_legend_param = list(legend_direction = "horizontal", legend_width = unit(6, "cm")),
+                use_raster = FALSE,
+                #col = colorRamp2(quantile_breaks(exp_matrix, 11), divergent_colors),
+                col = colorRamp2(-5:5, divergent_colors),
+                #split = split,
+                show_row_names=F,
+                show_column_names=F)
+
+
+
+pdf(file.path(output_path, 'Figure_3e_contrast_heatmap.pdf'), width = 16, height = 9)
+draw(hmap4, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+pdf(file.path(output_path, 'Figure_3e_skinny_contrast_heatmap.pdf'), width = 7, height = 9)
+draw(hmap4, heatmap_legend_side = "bottom")#, annotation_legend_side='bottom')
+dev.off()
+
+#### Figure 7
+
+a = exp_matrix2[,((sm %>% filter(Kinase == 'TPK123') %>% pull(rowname)))]; colnames(a) = data.frame(rowname = colnames(a)) %>% left_join(sm) %>% pull(Condition)
+b = exp_matrix2[,((sm %>% filter(Kinase == 'PBS2') %>% pull(rowname)))]; colnames(b) = data.frame(rowname = colnames(b)) %>% left_join(sm) %>% pull(Condition)
+
+my_split = cutree(hclust(dist(cbind(a,b)), method = 'ward.D2'),k=7)
+as.data.frame(my_split) %>% rownames_to_column('Gene') %>% arrange(my_split) %>% write_csv(file.path('../../../../output/Images/figure_7', 'Figure_7_genes.csv'))
+
+png(file.path('../../../../output/Images/figure_7', 'Figure_7_anticor_heatmap.png'), width = 11000, height = 4000, res = 600)
+My_Heatmap(a,
+           name = 'PKA',
+           split = my_split) +
+  My_Heatmap(b,
+             name = 'PBS2')
+dev.off()
+
+# Figure S3B
+a = exp_matrix2[,((sm %>% filter(Kinase == 'YPK1') %>% pull(rowname)))]; colnames(a) = data.frame(rowname = colnames(a)) %>% left_join(sm) %>% pull(Condition)
+b = exp_matrix2[,((sm %>% filter(Kinase == 'SSN3') %>% pull(rowname)))]; colnames(b) = data.frame(rowname = colnames(b)) %>% left_join(sm) %>% pull(Condition)
+
+my_split = cutree(hclust(dist(cbind(a,b)), method = 'ward.D2'),k=7)
+#as.data.frame(my_split) %>% rownames_to_column('Gene') %>% arrange(my_split) %>% write_csv(file.path('../../../../output/Images/figure_7', 'Figure_7_genes.csv'))
+
+png(file.path('~/Desktop/Figure S3B.png'), width = 11000, height = 4000, res = 600)
+My_Heatmap(a,
+           name = 'YPK1',
+           split = my_split) +
+  My_Heatmap(b,
+             name = 'SSN3')
+dev.off()
