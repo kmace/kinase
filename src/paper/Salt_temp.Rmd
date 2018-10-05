@@ -1,9 +1,9 @@
 ---
-title: "Tunicamycin"
+title: "Salt"
 output: html_notebook
 ---
 
-Here we perform an individual analysis of the Tunicamycin Condition.
+Here we perform an individual analysis of the Salt Condition.
 
 # Extract the data:
 
@@ -20,26 +20,24 @@ t2g = read_csv('../../intermediate/t2g.csv')
 
 meta_wt = meta %>% filter(Strain == 'WT')
 counts_wt = readDGE(meta_wt$star_path, columns = c(1,3), labels = meta_wt$Experiment)[-c(1:3),]
-meta_tm = meta %>% filter(Condition == 'Tunicamycin')
+meta_tm = meta %>% filter(Condition == 'Salt')
 counts_tm = readDGE(meta_tm$star_path, columns = c(1,3), labels = meta_tm$Experiment)[-c(1:3),]
-
-modules = read_csv('../../intermediate/external_modules.csv')
 
 ```
 
 
-# Defining the Tunicamycin Program in WT cells 
+# Defining the Salt Program in WT cells 
 ```{r}
 library(DESeq2)
 dds_wt = DESeqDataSetFromMatrix(counts_wt, colData = meta_wt, ~Condition)
 dds_wt %<>% DESeq()
 
 res_wt = results(dds_wt, 
-                 name = "Condition_Tunicamycin_vs_YPD",
+                 name = "Condition_Salt_vs_YPD",
                  independentFiltering = FALSE)
 
 res_wt = lfcShrink(dds_wt,
-                   coef = "Condition_Tunicamycin_vs_YPD",
+                   coef = "Condition_Salt_vs_YPD",
                    res = res_wt)
 
 plotMA(res_wt)
@@ -48,7 +46,7 @@ plotMA(res_wt)
 
 Okay, so there are some differentially expressed genes. what are they?
 
-## Repressed in Tunicamycin Genes:
+## Repressed in Salt Genes:
 ```{r}
 fdr.threshold = 0.1
 
@@ -80,7 +78,7 @@ res_wt %>%
 ```
 
 
-## Activated Tunicamycin Genes:
+## Activated Salt Genes:
 ```{r}
 
 res_wt %>% 
@@ -124,16 +122,13 @@ res_tm = resultsNames(dds_tm)[-1] %>%
 
 ## Probing the relationship between kinase changes and condition changes:
 
-Lets plot the Kinase changes, vs the Tunicamycin change:
+Lets plot the Kinase changes, vs the Salt change:
 
 ```{r}
-#interest_genes = modules %>% filter(grepl('reticulum unfolded', module, ignore.case = TRUE)) %>% pull(Gene)
-interest_genes = modules %>% filter(grepl('osmo', module, ignore.case = TRUE)) %>% pull(Gene)
-joined_res %>% mutate(in_er = Gene %in% interest_genes) %>%
-  filter(wt_padj < 0.1) %>% ggplot(aes(x = wt_l2FC, y = log2FoldChange, group = movement, color = in_er)) + geom_point() + geom_smooth(method='lm') + facet_wrap(~Strain) + xlab('Wild Type Fold Change (Tunicamycin vs. YPD)') + ylab('Strain Differece (Strain vs Wild Type, all in Tunicamycin)')
+joined_res %>% filter(wt_padj < 0.1) %>% ggplot(aes(x = wt_l2FC, y = log2FoldChange, group = movement)) + geom_point() + geom_smooth(method='lm') + facet_wrap(~Strain) + xlab('Wild Type Fold Change (Salt vs. YPD)') + ylab('Strain Differece (Strain vs Wild Type, all in Salt)')
 
 ```
-It looks like in Tunicamycin, inactivation of most kinases have very little effect.
+It looks like in Salt, inactivation of most kinases have very little effect.
 
 Some kinases have an effect:
 IRE1
@@ -144,9 +139,9 @@ KSP1
 
 However these changes do not seem to corrolate with the WT response. Except for IRE1
 
-IRE1 seems to be negatively corrolated with the WT Tunicamycin vs. YPD response. 
+IRE1 seems to be negatively corrolated with the WT Salt vs. YPD response. 
 
-I interpret this to mean that the IRE1 Strain is in not only modifying gene expression when inactivated (as is the case for the above kianses), but its effect is directly inhibiting the cells ability to mount its WT response to Tunicamycin. One thing I think is very supprising is that IRE1 is not known to target the whole genome, but rather the UPR gene module. However we see this global trened. 
+I interpret this to mean that the IRE1 Strain is in not only modifying gene expression when inactivated (as is the case for the above kianses), but its effect is directly inhibiting the cells ability to mount its WT response to Salt. One thing I think is very supprising is that IRE1 is not known to target the whole genome, but rather the UPR gene module. However we see this global trened. 
 
 Lets pull out the slopes:
 
@@ -163,11 +158,11 @@ fits = joined_res %>% filter(wt_padj<0.3) %>%
          r_squared = map_dbl(glance, 'adj.r.squared')
          )
          
-ggplot(fits, aes(y=slope,x=r_squared,label=Strain, color = movement)) + geom_label() + scale_color_gradient2()       
+ggplot(fits, aes(y=slope,x=r_squared,label=Strain, color = movement)) + geom_label()        
 ```
 
 
-## Are there patterns in the kinase changes? do some kinases do the same thing in Tunicamycin?
+## Are there patterns in the kinase changes? do some kinases do the same thing in Salt?
 
 Lets use a heatmap to detect genes that change in the same way between kinases:
 
@@ -220,7 +215,7 @@ lets now make the same plot, but subset the genes that we believe are differenti
 
 Scatter plots with filtering
 ```{r}
-joined_res %>% filter(wt_padj<.1) %>% ggplot(aes(x = wt_l2FC, y = log2FoldChange, group = sign(wt_l2FC))) + geom_point() + geom_smooth(method='lm') + facet_wrap(~Strain) + xlab('Wild Type Fold Change (Tunicamycin vs. YPD)') + ylab('Strain Differece (Strain vs Wild Type, all in Tunicamycin)')
+joined_res %>% filter(wt_padj<.1) %>% ggplot(aes(x = wt_l2FC, y = log2FoldChange, group = sign(wt_l2FC))) + geom_point() + geom_smooth(method='lm') + facet_wrap(~Strain) + xlab('Wild Type Fold Change (Salt vs. YPD)') + ylab('Strain Differece (Strain vs Wild Type, all in Salt)')
 ```
 
 
@@ -266,12 +261,12 @@ p = draw(
 )
 ```
 
-It seems like inactivating many Kinases have an effect, meaning that those kinases must be active in Tunicamycin. However, not all of those kinases have an effect that is corrolated with The tunicamycin response. It does seem like IRE1 is anticorrolated.s
+It seems like inactivating many Kinases have an effect, meaning that those kinases must be active in Salt. However, not all of those kinases have an effect that is corrolated with The Salt response. It does seem like IRE1 is anticorrolated.s
 
 ```{r}
 # all in log space, so subtraction = division in count space
 strain_difference = IRE1_Tm - WT_Tm # What does inactivating IRE1 do in Tm compared to WT 
-condition_difference = WT_Tm - WT_YPD # what does adding tunicamycin do to WT cells
+condition_difference = WT_Tm - WT_YPD # what does adding Salt do to WT cells
 
 plot(x_axis = condition_difference,
      y_axis = strain_difference)
